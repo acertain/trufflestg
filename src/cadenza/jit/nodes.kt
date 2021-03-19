@@ -6,6 +6,7 @@ import cadenza.data.DataTypes
 import cadenza.data.drop
 import cadenza.frame.DataFrame
 import cadenza.section
+import cadenza.stg_types.Stg
 import com.oracle.truffle.api.CompilerDirectives
 import com.oracle.truffle.api.Truffle
 import com.oracle.truffle.api.TruffleLanguage
@@ -56,7 +57,7 @@ open class ProgramRootNode constructor(
   override fun isCloningAllowed() = true
   override fun execute(frame: VirtualFrame): Any? {
     return try {
-      body.executeAny(frame)
+      body.execute(frame)
     } catch (tailCall: TailCallException) {
       tailCallLoop.execute(tailCall)
     }
@@ -66,12 +67,7 @@ open class ProgramRootNode constructor(
   override fun getName() = "program root"
 }
 
-class InlineCode(
-  language: Language,
-  @field:Child var body: Code
-) : ExecutableNode(language) {
-  override fun execute(frame: VirtualFrame) = body.executeAny(frame)
-}
+
 
 @GenerateWrapper
 open class ClosureBody constructor(
@@ -79,27 +75,11 @@ open class ClosureBody constructor(
 ) : Node(), InstrumentableNode {
   constructor(that: ClosureBody) : this(that.content)
 
-  open fun execute(frame: VirtualFrame): Any? = content.executeAny(frame)
+  open fun execute(frame: VirtualFrame): Any? = content.execute(frame)
   override fun isInstrumentable() = true
   override fun createWrapper(probe: ProbeNode): InstrumentableNode.WrapperNode = ClosureBodyWrapper(this, this, probe)
   override fun hasTag(tag: Class<out Tag>?) = tag == StandardTags.RootBodyTag::class.java
   override fun getSourceSection(): SourceSection? = parent.sourceSection
-}
-
-// todo: should this get removed & always inline?
-// might still be good to use this, since we could use this e.g. at gc time to do selector forwarding
-// todo: this doesn't work if one of the args is a neutral
-open class BuiltinRootNode(
-  private val language: Language,
-  @field:Child var builtin: Builtin
-) : CadenzaRootNode(language, FrameDescriptor()) {
-  override fun execute(frame: VirtualFrame): Any? {
-//    assert(frame.arguments.size == builtin.arity) { "bad builtin application $builtin" }
-    return builtin.run(frame, drop(1, frame.arguments))
-  }
-
-  override fun isCloningAllowed() = true
-  override fun getName() = "builtin"
 }
 
 // TODO: instrumentable body prelude node w/ RootTag?
@@ -108,27 +88,13 @@ open class ClosureRootNode(
   private val language: Language,
   frameDescriptor: FrameDescriptor = FrameDescriptor(),
   val arity: Int,
+  val argBinders: Array<Stg.SBinder>,
   // slot = closure.env[ix]
-  @CompilerDirectives.CompilationFinal(dimensions = 1) val envPreamble: Array<Pair<FrameSlot, Int>> = arrayOf(),
+  @CompilerDirectives.CompilationFinal(dimensions = 1) val envPreamble: Array<Pair<FrameSlot, FrameSlot>>,
   @CompilerDirectives.CompilationFinal(dimensions = 1) val argPreamble: Array<Pair<FrameSlot, Int>>,
   @field:Child var body: ClosureBody,
-  val source: Source,
-  val loc: Loc? = null
+  val srcSection: SourceSection?
 ) : CadenzaRootNode(language, frameDescriptor) {
-
-  constructor(
-    other: ClosureRootNode
-  ) : this(
-    other.language,
-    other.frameDescriptor,
-    other.arity,
-    other.envPreamble,
-    other.argPreamble,
-    other.body,
-    other.source,
-    other.loc
-  )
-
   val bloomFilterSlot: FrameSlot = frameDescriptor.findOrAddFrameSlot("<TCO Bloom Filter>")
   @field:Child var selfTailCallLoopNode = SelfTailCallLoop(body, this)
   private val tailCallProfile: BranchProfile = BranchProfile.create()
@@ -141,9 +107,9 @@ open class ClosureRootNode(
     val offset = if (isSuperCombinator()) 2 else 1
     for ((slot, x) in argPreamble) local.setObject(slot, arguments[x+offset])
     if (isSuperCombinator()) { // supercombinator, given environment
-      val env = arguments[1] as DataFrame
+      val env = arguments[1] as MaterializedFrame
       // TODO: cache based on env type that does right read + write sequences?
-      for ((slot, ix) in envPreamble) local.setObject(slot, env.getValue(ix))
+      for ((slot, slot2) in envPreamble) local.setObject(slot, env.getValue(slot2))
     }
   }
 
@@ -168,8 +134,8 @@ open class ClosureRootNode(
     }
   }
 
-  override fun getSourceSection(): SourceSection? = loc?.let { source.section(it) }
-  override fun isInstrumentable() = loc !== null
+  override fun getSourceSection(): SourceSection? = srcSection //loc?.let { source.section(it) }
+//  override fun isInstrumentable() = loc !== null
   override fun getName() = "closure"
 
   override fun isCloningAllowed() = true

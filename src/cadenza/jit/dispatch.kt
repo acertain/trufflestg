@@ -40,7 +40,7 @@ abstract class DispatchCallTarget : Node() {
 @ReportPolymorphism
 abstract class Dispatch(@JvmField val argsSize: Int, val tail_call: Boolean = false) : Node() {
   // pre: ys.size == argsSize
-  abstract fun executeDispatch(frame: VirtualFrame, fn: Closure, ys: Array<Any?>): Any?
+  abstract fun executeDispatch(frame: VirtualFrame, fn: Closure, ys: Array<Any?>): Any
 
   @Specialization(guards = [
     "fn.arity == argsSize",
@@ -55,7 +55,7 @@ abstract class Dispatch(@JvmField val argsSize: Int, val tail_call: Boolean = fa
                  @Cached("create(cachedCallTarget)") callerNode: DirectCallerNode
                  ): Any? {
     val args = appendLSkip(if (hasEnv) 2 else 1, fn.papArgs, papSize, ys, argsSize)
-    if (hasEnv) { args[1] = fn.env as DataFrame }
+    if (hasEnv) { args[1] = fn.env as MaterializedFrame }
     // TODO: figure out how to avoid TailCallException if inlining
     return callerNode.call(frame, args, tail_call)
   }
@@ -76,7 +76,7 @@ abstract class Dispatch(@JvmField val argsSize: Int, val tail_call: Boolean = fa
                             @Cached("create(cachedCallTarget)") callerNode: DirectCallerNode,
                             @Cached("createMinusTail(argsSize, arity)") dispatch: Dispatch): Any? {
     val args = appendLSkip(if (hasEnv) 2 else 1, fn.papArgs, papSize, ys, arity)
-    if (hasEnv) { args[1] = fn.env as DataFrame }
+    if (hasEnv) { args[1] = fn.env as MaterializedFrame }
     val y = callerNode.call(frame, args, false)
     val zs = ys.copyOfRange(arity, argsSize)
     return dispatch.executeDispatch(frame, y as Closure, zs)
@@ -96,7 +96,7 @@ abstract class Dispatch(@JvmField val argsSize: Int, val tail_call: Boolean = fa
                    @Cached("create()") callerNode: IndirectCallerNode): Any? {
     val hasEnv = fn.env != null
     val args = appendLSkip(if (hasEnv) 2 else 1, fn.papArgs, fn.papArgs.size, ys, argsSize)
-    if (hasEnv) { args[1] = fn.env as DataFrame }
+    if (hasEnv) { args[1] = fn.env as MaterializedFrame }
     return callerNode.call(frame, fn.callTarget, args, tail_call)
   }
 
@@ -112,7 +112,7 @@ abstract class Dispatch(@JvmField val argsSize: Int, val tail_call: Boolean = fa
     val zs = ys.copyOfRange(fn.arity, ys.size)
     val hasEnv = fn.env != null
     val args = appendLSkip(if (hasEnv) 2 else 1, fn.papArgs, fn.papArgs.size, xs, arity)
-    if (hasEnv) { args[1] = fn.env as DataFrame }
+    if (hasEnv) { args[1] = fn.env as MaterializedFrame }
     val y = callerNode.call(frame, fn.callTarget, args, false)
     return dispatch.executeDispatch(frame, y as Closure, zs)
   }

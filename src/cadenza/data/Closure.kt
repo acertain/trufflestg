@@ -3,9 +3,7 @@ package cadenza.data
 import cadenza.frame.DataFrame
 import cadenza.jit.CallUtils
 import cadenza.jit.ClosureRootNode
-import cadenza.semantics.Type
-import cadenza.semantics.Type.Arr
-import cadenza.semantics.after
+import cadenza.panic
 import com.oracle.truffle.api.CompilerDirectives
 import com.oracle.truffle.api.RootCallTarget
 import com.oracle.truffle.api.frame.MaterializedFrame
@@ -18,31 +16,51 @@ import com.oracle.truffle.api.library.ExportMessage
 import com.oracle.truffle.api.nodes.ExplodeLoop
 
 
+// for testing
+// TODO: remove
+fun whnf(x: Any): Any = when(x) {
+  is Thunk -> x.whnf()
+  else -> x
+}
+
+class Thunk(
+  var clos: Closure?,
+  var value: Any?
+) {
+  fun whnf(): Any =
+    if (clos == null) {
+      value ?: panic("Thunk: all null (bad LetRec?)")
+    } else {
+      var x = clos!!.call()
+      // FIXME: this shouldn't be possible
+      if (x is Thunk) {
+        x = x.whnf()
+      }
+      clos = null
+      value = x
+      x
+    }
+}
+
+
 // TODO: consider storing env in papArgs, to make indirect calls faster
 // (don't need to branch on env + pap, just pap)
 // & store flag if it has an env & read it from papArgs?
 @CompilerDirectives.ValueType
-@ExportLibrary(InteropLibrary::class)
+// TODO: i'm using Closure when arity == 0 sometimes, make sure it works
 class Closure (
-  @JvmField val env: DataFrame? = null,
+  @JvmField val env: MaterializedFrame? = null,
   @JvmField @CompilerDirectives.CompilationFinal(dimensions = 1) val papArgs: Array<Any?>,
+  // left
   @JvmField val arity: Int,
-  private val targetType: Type,
   @JvmField val callTarget: RootCallTarget
 ) : TruffleObject {
-  val type get() = targetType.after(papArgs.size)
+  val rootNode: ClosureRootNode
+    get() = callTarget.rootNode as ClosureRootNode
 
   init {
-    // TODO: disabling for now, to support other calltargets
-    // should we have a different Lam or like expectCallTarget for them?
-//    assert(callTarget.rootNode is ClosureRootNode) { "not a function body" }
-    if (callTarget.rootNode is ClosureRootNode) {
-      assert(env != null == (callTarget.rootNode as ClosureRootNode).isSuperCombinator()) { "calling convention mismatch" }
-      assert(arity + papArgs.size == (callTarget.rootNode as ClosureRootNode).arity)
-    } else {
-      assert(env == null)
-    }
-    assert(arity <= targetType.arity - papArgs.size)
+    assert(env != null == (callTarget.rootNode as ClosureRootNode).isSuperCombinator()) { "calling convention mismatch" }
+    assert(arity + papArgs.size == (callTarget.rootNode as ClosureRootNode).arity)
   }
 
   override fun equals(other: Any?): Boolean {
@@ -55,47 +73,68 @@ class Closure (
     )
   }
 
-  @ExportMessage
-  fun isExecutable() = true
-
-  // allow the use of our closures from other polyglot languages
-  @ExportMessage
-  @ExplodeLoop
-  @Throws(ArityException::class, UnsupportedTypeException::class)
-  fun execute(vararg arguments: Any?): Any? {
-    val maxArity = type.arity
-    val len = arguments.size
-    if (len > maxArity) throw ArityException.create(maxArity, len)
-    arguments.fold(type) { t, it -> (t as Arr).apply { argument.validate(it) }.result }
-    @Suppress("UNCHECKED_CAST")
-    return call(arguments)
+  // returns a Closure or a Thunk
+  fun apply(arguments: Array<Any?>): Any = when {
+    arity == arguments.size -> Thunk(pap(arguments), null)
+    arity < arguments.size -> pap(arguments)
+    else -> TODO()
   }
 
-  // only used for InteropLibrary execute
-  private fun call(ys: Array<out Any?>): Any? {
-    // TODO: need to catch TailCallException here
-    // or maybe we should have a special RootNode for InteropLibrary instead of closure?
-    // to deal w/ second level dispatch
-    return when {
-      ys.size < arity -> pap(ys)
-      ys.size == arity -> {
-        val args = if (env != null) consAppend(env, papArgs, ys) else append(papArgs, ys)
-        CallUtils.callTarget(callTarget, args)
-      }
-      else -> {
-        val zs = append(papArgs, ys)
-        val args = if (env != null) consTake(env, arity, zs) else (zs.take(arity).toTypedArray())
-        val g = CallUtils.callTarget(callTarget, args)
-        (g as Closure).call(drop(arity, zs))
-      }
-    }
+  fun call(): Any {
+    if (arity != 0) { throw Exception("Closure.call: bad arity") }
+    val args = if (env != null) arrayOf(0L, env, *papArgs) else arrayOf(0L, *papArgs)
+    return CallUtils.callTarget(callTarget, args)
   }
+
+  fun call(args: Array<Any?>): Any {
+    val x = apply(args)
+    val r = (x as Thunk).whnf()
+    if (r is Closure) { panic("Closure.call whnf returned a closure?") }
+    return r
+//    return ((x as Thunk).whnf() as Closure).call()
+  }
+
+//  @ExportMessage
+//  fun isExecutable() = true
+//
+//  // allow the use of our closures from other polyglot languages
+//  @ExportMessage
+//  @ExplodeLoop
+//  @Throws(ArityException::class, UnsupportedTypeException::class)
+//  fun execute(vararg arguments: Any?): Any? {
+//    val maxArity = type.arity
+//    val len = arguments.size
+//    if (len > maxArity) throw ArityException.create(maxArity, len)
+//    arguments.fold(type) { t, it -> (t as Arr).apply { argument.validate(it) }.result }
+//    @Suppress("UNCHECKED_CAST")
+//    return call(arguments)
+//  }
+//
+//  // only used for InteropLibrary execute
+//  fun call(ys: Array<out Any?>): Any? {
+//    // TODO: need to catch TailCallException here
+//    // or maybe we should have a special RootNode for InteropLibrary instead of closure?
+//    // to deal w/ second level dispatch
+//    return when {
+//      ys.size < arity -> pap(ys)
+//      ys.size == arity -> {
+//        val args = if (env != null) consAppend(env, papArgs, ys) else append(papArgs, ys)
+//        CallUtils.callTarget(callTarget, args)
+//      }
+//      else -> {
+//        val zs = append(papArgs, ys)
+//        val args = if (env != null) consTake(env, arity, zs) else (zs.take(arity).toTypedArray())
+//        val g = CallUtils.callTarget(callTarget, args)
+//        (g as Closure).call(drop(arity, zs))
+//      }
+//    }
+//  }
 
   // construct a partial application node, which should check that it is a PAP itself
   @CompilerDirectives.TruffleBoundary
   fun pap(@Suppress("UNUSED_PARAMETER") arguments: Array<out Any?>): Closure {
     val len = arguments.size
-    return Closure(env, append(papArgs, arguments), arity - len, targetType, callTarget)
+    return Closure(env, append(papArgs, arguments), arity - len, callTarget)
   }
 }
 

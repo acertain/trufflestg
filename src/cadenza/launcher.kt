@@ -151,7 +151,7 @@ class Launcher : AbstractLanguageLauncher() {
   companion object {
     @JvmStatic
     fun main(args: Array<String>) {
-      Launcher().launch(if (args.isEmpty()) arrayOf("examples/add.za") else args)
+      Launcher().launch(if (args.isEmpty()) arrayOf("examples/boyer.za") else args)
     }
   }
 }

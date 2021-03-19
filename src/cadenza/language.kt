@@ -1,27 +1,20 @@
 package cadenza
 
 import cadenza.data.Closure
-import cadenza.jit.Code
-import cadenza.jit.InlineCode
-import cadenza.jit.ProgramRootNode
-import cadenza.jit.initialCtx
-import cadenza.semantics.CompileInfo
-import cadenza.semantics.Term
-import cadenza.semantics.Type
-import cadenza.semantics.Type.Arr
-import cadenza.semantics.Type.Nat
-import cadenza.syntax.*
+import cadenza.data.RealWorld
+import cadenza.data.VoidInh
+import cadenza.data.whnf
+import cadenza.jit.CborModuleDir
+import cadenza.jit.TopLevel
 import com.oracle.truffle.api.*
 import com.oracle.truffle.api.TruffleLanguage.ContextPolicy
 import com.oracle.truffle.api.debug.DebuggerTags
-import com.oracle.truffle.api.frame.FrameDescriptor
 import com.oracle.truffle.api.instrumentation.ProvidedTags
 import com.oracle.truffle.api.instrumentation.StandardTags.*
 import com.oracle.truffle.api.interop.InteropLibrary
 import com.oracle.truffle.api.interop.TruffleObject
 import com.oracle.truffle.api.interop.UnsupportedMessageException
 import com.oracle.truffle.api.nodes.NodeInfo
-import com.oracle.truffle.api.source.Source
 import com.oracle.truffle.api.source.SourceSection
 import org.graalvm.options.OptionDescriptors
 import org.graalvm.options.OptionValues
@@ -146,56 +139,59 @@ class Language : TruffleLanguage<Language.Context>() {
     return true
   }
 
+//
+//  // stubbed: for now inline parsing requests just return 'const'
+//  override fun parse(request: InlineParsingRequest?): InlineCode {
+//    val body = k(Nat, Nat)
+//    return InlineCode(this, body)
+//  }
 
-  // stubbed: for now inline parsing requests just return 'const'
-  override fun parse(request: InlineParsingRequest?): InlineCode {
-    val body = k(Nat, Nat)
-    return InlineCode(this, body)
-  }
-
+  @ExperimentalStdlibApi
   override fun parse(request: ParsingRequest): CallTarget {
     val source = request.source
-    // todo: request.argumentNames
-    // todo: parse decls here instead of expressions?
-    return parse(source)
+
+    val path = source.characters.toString()
+
+    val d = CborModuleDir(this, path)
+
+    val y = d["Main"]!!
+    val z = whnf(y["main"]!!) as Closure
+
+//    println(z.rootNode.argBinders[0])
+
+    val w = whnf(try {
+      z.apply(arrayOf(RealWorld))
+//      z.callTarget.call(0L, VoidInh)
+    } catch (e: Exception) {
+      e.printStackTrace()
+      throw e
+    })
+
+    println(w)
+
+    TODO("parse")
   }
 
-  fun parse(source: Source): CallTarget {
-    val result = source.parse { grammar }
-    when (result) {
-      is Failure -> {
-        print(result)
-        throw SyntaxError(result)
-      }
-      is Success -> {
-        val ci = CompileInfo(source, this)
-        val fd = FrameDescriptor()
-        val witness = result.value.infer(initialCtx)
-        val rootNode = ProgramRootNode(this, witness.compile(ci, fd), fd, source)
-        return Truffle.getRuntime().createCallTarget(rootNode)
-      }
-    }
-  }
+//
+//  override fun findExportedSymbol(context: Context?, globalName: String?, onlyExplicit: Boolean): Any? =
+//    when (globalName) {
+//      "S" -> s(Arr(Nat, Arr(Nat, Nat)), Arr(Nat, Nat), Nat)
+//      "K" -> k(Nat, Nat)
+//      "I" -> i(Nat)
+//      "main" -> 42
+//      else -> null
+//    }
 
-  override fun findExportedSymbol(context: Context?, globalName: String?, onlyExplicit: Boolean): Any? =
-    when (globalName) {
-      "S" -> s(Arr(Nat, Arr(Nat, Nat)), Arr(Nat, Nat), Nat)
-      "K" -> k(Nat, Nat)
-      "I" -> i(Nat)
-      "main" -> 42
-      else -> null
-    }
-
-  @Suppress("UNUSED_PARAMETER")
-  private fun s(tx: Type, ty: Type, tz: Type): Code = todo
-  private fun k(tx: Type, ty: Type) = binary({ x, _ -> x }, tx, ty)
-  private fun i(tx: Type) = unary({ x -> x }, tx)
-
-  @Suppress("UNUSED_PARAMETER")
-  inline fun unary(f: (x: Term) -> Term, argument: Type): Code = todo
-
-  @Suppress("UNUSED_PARAMETER")
-  inline fun binary(f: (x: Term, y: Term) -> Term, tx: Type, ty: Type): Code = todo
+//  @Suppress("UNUSED_PARAMETER")
+//  private fun s(tx: Type, ty: Type, tz: Type): Code = todo
+//  private fun k(tx: Type, ty: Type) = binary({ x, _ -> x }, tx, ty)
+//  private fun i(tx: Type) = unary({ x -> x }, tx)
+//
+//  @Suppress("UNUSED_PARAMETER")
+//  inline fun unary(f: (x: Term) -> Term, argument: Type): Code = todo
+//
+//  @Suppress("UNUSED_PARAMETER")
+//  inline fun binary(f: (x: Term, y: Term) -> Term, tx: Type, ty: Type): Code = todo
 
   companion object {
     fun currentLanguage(): Language = getCurrentLanguage(Language::class.java)
