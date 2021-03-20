@@ -7,6 +7,7 @@ import com.oracle.truffle.api.dsl.TypeSystem;
   Closure.class,
   Thunk.class,
   StgData.class,
+  StgArray.class,
   VoidInh.class,
   StgInt.class
 })

@@ -59,6 +59,7 @@ data class StgInt(val x: Long) {
   operator fun compareTo(y: StgInt): Int = x.compareTo(y.x)
 }
 data class StgWord(val x: ULong)
+// TODO: should x be UInt?
 data class StgChar(val x: Int)
 
 // for us an Addr# must be an offset into an array

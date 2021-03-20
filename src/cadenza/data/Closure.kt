@@ -25,21 +25,33 @@ fun whnf(x: Any): Any = when(x) {
 
 class Thunk(
   var clos: Closure?,
-  var value: Any?
+  var value_: Any?
 ) {
-  fun whnf(): Any =
-    if (clos == null) {
-      value ?: panic("Thunk: all null (bad LetRec?)")
-    } else {
-      var x = clos!!.call()
-      // FIXME: this shouldn't be possible
-      if (x is Thunk) {
-        x = x.whnf()
-      }
-      clos = null
-      value = x
-      x
+  fun getValue(): Any {
+    val v = value_
+    if (v == null) {
+      CompilerDirectives.transferToInterpreter()
+      if (clos != null) { panic("Thunk.getValue() but it's not evaluated") }
+      // TODO: threading
+      else { panic("Thunk.getValue() but evaluation already in progress (infinite loop? bad letrec?)") }
     }
+    return v
+  }
+
+  fun evaluated(): Boolean = clos == null
+
+  fun whnf(): Any {
+    val cl = clos
+    if (cl == null) return getValue()
+    clos = null
+    var x = cl.call()
+    // FIXME: this shouldn't be possible
+    if (x is Thunk) {
+      x = x.whnf()
+    }
+    value_= x
+    return x
+  }
 }
 
 

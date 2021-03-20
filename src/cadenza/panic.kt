@@ -30,6 +30,11 @@ fun panic(msg: String): Nothing {
   throw Panic(msg).also { it.stackTrace = it.stackTrace.trim() }
 }
 
+fun panic(msg: () -> String): Nothing {
+  CompilerDirectives.transferToInterpreter()
+  throw Panic(msg()).also { it.stackTrace = it.stackTrace.trim() }
+}
+
 internal class TODO() : RuntimeException() {
   companion object { const val serialVersionUID : Long = 1L }
   override fun toString(): String =

@@ -64,7 +64,10 @@ java {
 }
 
 tasks.withType<KotlinCompile> {
-  kotlinOptions.jvmTarget = JavaVersion.VERSION_1_8.toString()
+  kotlinOptions {
+    jvmTarget = JavaVersion.VERSION_1_8.toString()
+    freeCompilerArgs += "-Xno-param-assertions"
+  }
 }
 
 fun<R> SourceSet.kotlin(f: KotlinSourceSet.() -> R): R =

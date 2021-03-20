@@ -13,9 +13,8 @@ import com.oracle.truffle.api.dsl.TypeSystemReference
 import com.oracle.truffle.api.frame.*
 import com.oracle.truffle.api.instrumentation.*
 import com.oracle.truffle.api.nodes.*
+import com.oracle.truffle.api.profiles.BranchProfile
 import com.oracle.truffle.api.source.SourceSection
-import kotlin.TODO
-import kotlin.reflect.cast
 
 // utility
 @Suppress("NOTHING_TO_INLINE")
@@ -29,7 +28,8 @@ private inline fun isSuperCombinator(callTarget: RootCallTarget) =
 abstract class Code(val loc: Loc?) : Node(), InstrumentableNode {
   constructor(that: Code) : this(that.loc)
 
-  abstract fun execute(frame: VirtualFrame): Any
+  // should never return null, the Any? is just to get kotlin to not insert null checks...
+  abstract fun execute(frame: VirtualFrame): Any?
 
   override fun getSourceSection(): SourceSection? = loc?.let { rootNode?.sourceSection?.source?.section(it) }
   override fun isInstrumentable() = loc !== null
@@ -44,24 +44,13 @@ abstract class Code(val loc: Loc?) : Node(), InstrumentableNode {
     @field:Children val rands: Array<Arg>,
     tail_call: Boolean
   ) : Code(null) {
-    // TODO: i think Apps should never be underapplied (we're always going to whnf), so take advaantage of that in dispatch
-    // TODO: but function types can whnf to paps? so no
-    @Child private var dispatch: Dispatch = DispatchNodeGen.create(rands.size, tail_call)
+    @field:Child private var callWhnf: CallWhnf = CallWhnf(rands.size, tail_call)
 
     @ExplodeLoop
     private fun executeRands(frame: VirtualFrame): Array<Any?> = rands.map { it.execute(frame) }.toTypedArray()
 
     // TODO: make sure this is in whnf (assert?)
-    override fun execute(frame: VirtualFrame): Any {
-      var f = rator.execute(frame)
-      if (f is Thunk) { f = f.whnf() }
-      if (f is Closure) {
-        return dispatch.executeDispatch(frame, f, executeRands(frame))
-      }
-      // probably f is already a value
-      if (rands.isEmpty()) return f
-      panic("$f")
-    }
+    override fun execute(frame: VirtualFrame): Any = callWhnf.execute(frame, rator.execute(frame), executeRands(frame))
 
     override fun hasTag(tag: Class<out Tag>?) = tag == StandardTags.CallTag::class.java || super.hasTag(tag)
   }
@@ -96,7 +85,9 @@ abstract class Code(val loc: Loc?) : Node(), InstrumentableNode {
 //    }
 //  }
 
-  class ConApp(val x: Rhs.ArgCon): Code(null) {
+  class ConApp(
+    @field:Child var x: Rhs.ArgCon
+  ): Code(null) {
     override fun execute(frame: VirtualFrame): Any = x.execute(frame)
   }
 
@@ -109,7 +100,7 @@ abstract class Code(val loc: Loc?) : Node(), InstrumentableNode {
     @field:Child var value: Rhs,
     @field:Child var body: Code
   ): Code(null) {
-    override fun execute(frame: VirtualFrame): Any {
+    override fun execute(frame: VirtualFrame): Any? {
       frame.setObject(slot, value.execute(frame))
       return body.execute(frame)
     }
@@ -120,7 +111,7 @@ abstract class Code(val loc: Loc?) : Node(), InstrumentableNode {
     @field:Children val values: Array<Rhs>,
     @field:Child var body: Code
   ) : Code(null) {
-    override fun execute(frame: VirtualFrame): Any {
+    override fun execute(frame: VirtualFrame): Any? {
       val cs = slots.map {
         val t = Thunk(null, null)
         frame.setObject(it, t)
@@ -132,7 +123,7 @@ abstract class Code(val loc: Loc?) : Node(), InstrumentableNode {
           cs[ix].clos = x.clos
         } else {
           frame.setObject(slots[ix], x)
-          cs[ix].value = x
+          cs[ix].value_ = x
         }
       }
       return body.execute(frame)
@@ -145,8 +136,8 @@ abstract class Code(val loc: Loc?) : Node(), InstrumentableNode {
     @field:Child var alts: CaseAlts,
     @field:Child var default: Code?
   ) : Code(null) {
-    override fun execute(frame: VirtualFrame): Any {
-      val x = thing.execute(frame)!!
+    override fun execute(frame: VirtualFrame): Any? {
+      val x = thing.execute(frame)
       frame.setObject(evaluatedSlot, x)
       val y = alts.execute(frame, x)
       if (y != null) return y
@@ -158,16 +149,22 @@ abstract class Code(val loc: Loc?) : Node(), InstrumentableNode {
 @TypeSystemReference(DataTypes::class)
 @ReportPolymorphism
 abstract class CaseAlts : Node() {
-  abstract fun execute(frame: VirtualFrame, x: Any): Any?
+  abstract fun execute(frame: VirtualFrame, x: Any?): Any?
 
   class PrimAlts(
     @CompilerDirectives.CompilationFinal(dimensions = 1) val alts: Array<Any>,
     @field:Children val bodies: Array<Code>
   ) : CaseAlts() {
-    override fun execute(frame: VirtualFrame, x: Any): Any? {
+    @CompilerDirectives.CompilationFinal(dimensions = 1) val profiles: Array<BranchProfile> = Array(alts.size) { BranchProfile.create() }
+
+    @ExplodeLoop
+    override fun execute(frame: VirtualFrame, x: Any?): Any? {
       // TODO: assert x is actually a primitive
       alts.forEachIndexed { ix, y ->
-        if (x == y) return bodies[ix].execute(frame)
+        if (x == y) {
+          profiles[ix].enter()
+          return bodies[ix].execute(frame)
+        }
       }
       return null
     }
@@ -179,13 +176,13 @@ abstract class CaseAlts : Node() {
     @CompilerDirectives.CompilationFinal(dimensions = 1) val fieldSlots: Array<FrameSlot>,
     @field:Child var body: Code
   ): CaseAlts() {
-    override fun execute(frame: VirtualFrame, x: Any): Any? {
+    override fun execute(frame: VirtualFrame, x: Any?): Any? {
       // TODO: i think this is safe since unboxed tuples can't be thunks?
       if (arity > 0) {
         if (x is StgData && x.con === DataCon("ghc-prim", "GHC.Prim", "Unit#") && arity == 1) {
           frame.setObject(fieldSlots[0], x.args[0])
         } else {
-          if (x !is cadenza.data.UnboxedTuple ) { panic("CaseUnboxedTuple of $x") }
+          if (x !is cadenza.data.UnboxedTuple ) { panic("CaseUnboxedTuple") }
           if (x.x.size != arity) { panic("CaseUnboxedTuple: wrong arity") }
           fieldSlots.forEachIndexed  { ix, sl -> frame.setObject(sl, x.x[ix]) }
         }
@@ -199,12 +196,17 @@ abstract class CaseAlts : Node() {
     @CompilerDirectives.CompilationFinal(dimensions = 1) val cons: Array<Pair<DataCon,Array<FrameSlot>>>,
     @field:Children val bodies: Array<Code>
   ): CaseAlts() {
-    override fun execute(frame: VirtualFrame, x: Any): Any? {
-      val y = whnf(x) as StgData
+    @CompilerDirectives.CompilationFinal(dimensions = 1) val profiles: Array<BranchProfile> = Array(cons.size) { BranchProfile.create() }
+
+    @ExplodeLoop
+    override fun execute(frame: VirtualFrame, x: Any?): Any? {
+//      val y = whnf(x) as StgData
+      if (x !is StgData) { panic("AlgAlts") }
       cons.forEachIndexed { ix, (c, sls) ->
-        if (c === y.con) {
-          if (y.args.size != sls.size) { panic("AlgAlts: con size mismatch") }
-          sls.forEachIndexed { sx, s -> frame.setObject(s, y.args[sx]) }
+        if (c === x.con) {
+          profiles[ix].enter()
+          if (x.args.size != sls.size) { panic("AlgAlts: con size mismatch") }
+          sls.forEachIndexed { sx, s -> frame.setObject(s, x.args[sx]) }
           return bodies[ix].execute(frame)
         }
       }
@@ -214,7 +216,7 @@ abstract class CaseAlts : Node() {
 
   // used to evaluate unknown types
   class PolyAlt: CaseAlts() {
-    override fun execute(frame: VirtualFrame, x: Any): Any? = null
+    override fun execute(frame: VirtualFrame, x: Any?): Any? = null
   }
 }
 
@@ -248,7 +250,9 @@ abstract class Arg : Node() {
     val id: Stg.BinderId,
     val slot: FrameSlot
   ): Var() {
-    override fun execute(frame: VirtualFrame): Any = frame.getValue(slot)
+    override fun execute(frame: VirtualFrame): Any {
+      return frame.getObject(slot) ?: panic("null Local")
+    }
   }
 
   class Lit(val x: Any): Arg() {
@@ -289,7 +293,7 @@ abstract class Rhs : Node() {
     override fun execute(frame: VirtualFrame): Any = when {
       updFlag == Stg.UpdateFlag.Updatable && arity == 0 -> Thunk(Closure(captureEnv(frame), arrayOf(), arity, callTarget), null)
       updFlag == Stg.UpdateFlag.ReEntrant && arity > 0 -> Closure(captureEnv(frame), arrayOf(), arity, callTarget)
-      else -> TODO()
+      else -> todo
     }   //Closure(captureEnv(frame), arrayOf(), arity, callTarget)
 //    override fun executeClosure(frame: VirtualFrame): Closure = Closure(captureEnv(frame), arrayOf(), arity, callTarget)
 
@@ -297,7 +301,7 @@ abstract class Rhs : Node() {
     private fun captureEnv(frame: VirtualFrame): MaterializedFrame? {
       if (!isSuperCombinator()) return null
       val newFrame = Truffle.getRuntime().createVirtualFrame(noArguments, closureFd)
-      captures.forEach { newFrame.setObject(it.first, frame.getValue(it.second)) }
+      captures.forEach { newFrame.setObject(it.first, frame.getObject(it.second)) }
       return newFrame.materialize()
     }
   }
@@ -306,6 +310,7 @@ abstract class Rhs : Node() {
     val con: DataCon,
     @field:Children val args: Array<Arg>
   ) : Rhs() {
+    @ExplodeLoop
     override fun execute(frame: VirtualFrame): Any = StgData(con, map(args) { it.execute(frame) })
   }
 }

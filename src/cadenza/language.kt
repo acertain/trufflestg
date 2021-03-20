@@ -2,7 +2,6 @@ package cadenza
 
 import cadenza.data.Closure
 import cadenza.data.RealWorld
-import cadenza.data.VoidInh
 import cadenza.data.whnf
 import cadenza.jit.CborModuleDir
 import cadenza.jit.TopLevel
@@ -154,12 +153,13 @@ class Language : TruffleLanguage<Language.Context>() {
 
     val d = CborModuleDir(this, path)
 
-    val y = d["Main"]!!
-    val z = whnf(y["main"]!!) as Closure
+    val y = d["Main"]!!["main"]!!
+    val w = whnf(y)
+    val z = whnf(w) as Closure
 
 //    println(z.rootNode.argBinders[0])
 
-    val w = whnf(try {
+    val q = whnf(try {
       z.apply(arrayOf(RealWorld))
 //      z.callTarget.call(0L, VoidInh)
     } catch (e: Exception) {
@@ -167,7 +167,7 @@ class Language : TruffleLanguage<Language.Context>() {
       throw e
     })
 
-    println(w)
+    println(q)
 
     TODO("parse")
   }

@@ -3,13 +3,10 @@ package cadenza.jit
 import cadenza.Language
 import cadenza.Loc
 import cadenza.data.DataTypes
-import cadenza.data.drop
-import cadenza.frame.DataFrame
 import cadenza.section
 import cadenza.stg_types.Stg
 import com.oracle.truffle.api.CompilerDirectives
 import com.oracle.truffle.api.Truffle
-import com.oracle.truffle.api.TruffleLanguage
 import com.oracle.truffle.api.dsl.TypeSystemReference
 import com.oracle.truffle.api.frame.FrameDescriptor
 import com.oracle.truffle.api.frame.FrameSlot
@@ -93,6 +90,9 @@ open class ClosureRootNode(
   @CompilerDirectives.CompilationFinal(dimensions = 1) val envPreamble: Array<Pair<FrameSlot, FrameSlot>>,
   @CompilerDirectives.CompilationFinal(dimensions = 1) val argPreamble: Array<Pair<FrameSlot, Int>>,
   @field:Child var body: ClosureBody,
+  val module: Module,
+  // the stg TopLevel we are in
+  val parentTopLevel: TopLevel,
   val srcSection: SourceSection?
 ) : CadenzaRootNode(language, frameDescriptor) {
   val bloomFilterSlot: FrameSlot = frameDescriptor.findOrAddFrameSlot("<TCO Bloom Filter>")
@@ -109,7 +109,7 @@ open class ClosureRootNode(
     if (isSuperCombinator()) { // supercombinator, given environment
       val env = arguments[1] as MaterializedFrame
       // TODO: cache based on env type that does right read + write sequences?
-      for ((slot, slot2) in envPreamble) local.setObject(slot, env.getValue(slot2))
+      for ((slot, slot2) in envPreamble) local.setObject(slot, env.getObject(slot2))
     }
   }
 

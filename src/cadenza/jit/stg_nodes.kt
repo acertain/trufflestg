@@ -11,7 +11,9 @@ import com.oracle.truffle.api.source.Source
 import com.oracle.truffle.api.source.SourceSection
 
 data class CompileInfo(
-  val module: Module
+  val module: Module,
+  // the TopLevel we're compiling
+  val topLevel: TopLevel
 )
 
 fun Stg.BinderId.compile(ci: CompileInfo, fd: FrameDescriptor): Arg.Var {
@@ -185,6 +187,8 @@ fun Stg.Rhs.StgRhsClosure.compileC(bi: Stg.SBinder, ci: CompileInfo, fd: FrameDe
         envPreamble.toTypedArray(),
         argPreamble.toTypedArray(),
         ClosureBody(bodyCode),
+        ci.module,
+        ci.topLevel,
         bi.defLoc.build()
       )
     )
@@ -246,7 +250,7 @@ sealed class TopLevel(
       body.fixupFvs(module)
       val fd = FrameDescriptor()
       val fr = Truffle.getRuntime().createVirtualFrame(arrayOf(), fd)
-      body.compile(binder, CompileInfo(module), fd).execute(fr)
+      body.compile(binder, CompileInfo(module, this), fd).execute(fr)
     }
     override fun getValue(): Any = closure
   }
@@ -265,7 +269,7 @@ sealed class TopLevel(
     val con: Any by lazy {
       val fd = FrameDescriptor()
       val fr = Truffle.getRuntime().createVirtualFrame(arrayOf(), fd)
-      con.compile(binder, CompileInfo(module), fd).execute(fr)
+      con.compile(binder, CompileInfo(module, this), fd).execute(fr)
     }
     override fun getValue(): Any = con
   }
@@ -281,7 +285,9 @@ class CborModuleDir(
   operator fun get(name: String): Module? {
     if (name in loadedModules) return loadedModules[name]
     val mpath = path + name
+    print("loading $mpath... ")
     val c = readModule(mpath)
+    println("done")
     val m = Module(language, this, c)
     loadedModules[name] = m
     return m
@@ -352,17 +358,4 @@ class Module(
 
 }
 
-
-//@ExperimentalStdlibApi
-//@ExperimentalUnsignedTypes
-//fun main() {
-//  val path="/data/Code/ghc-whole-program-compiler-project/ghc.truffleghc/Main"
-//
-//  val x = readModule(path)
-//  val y = Module(x)
-//
-//  print(y["main"])
-//
-//
-//}
 
