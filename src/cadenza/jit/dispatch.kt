@@ -50,7 +50,7 @@ class CallWhnf(@JvmField val argsSize: Int, val tail_call: Boolean): Node() {
     if (ys.size != argsSize) { panic("CallWhnf: bad ys") }
     val f = if (fn is Thunk) {
       thunkProfile.enter()
-      // TODO: concurrency (blackholes? synchronization here?)
+      // TODO: concurrency (blackholes? synchronization?)
       val cl = fn.clos
       if (cl == null) {
         thunkProfileGet.enter()
@@ -72,7 +72,9 @@ class CallWhnf(@JvmField val argsSize: Int, val tail_call: Boolean): Node() {
 
 // TODO: dispatch on closure equality for static (no env or pap) closures?
 // (would need to statically allocate them)
-@ReportPolymorphism
+//@ReportPolymorphism
+// TODO: param for limit of recursive occurences?
+// TODO: dispatch by arity first?
 abstract class DispatchClosure(@JvmField val argsSize: Int, val tail_call: Boolean) : Node() {
   // pre: ys.size == argsSize
   abstract fun execute(frame: VirtualFrame, fn: Closure, ys: Array<Any?>): Any
@@ -101,7 +103,7 @@ abstract class DispatchClosure(@JvmField val argsSize: Int, val tail_call: Boole
     "fn.arity < argsSize",
     "fn.arity == arity",
     "fn.callTarget == cachedCallTarget"
-  ])
+  ], limit = "3")
   fun callDirectOverapplied(frame: VirtualFrame, fn: Closure, ys: Array<Any?>,
                             @Cached("fn.arity") arity: Int,
                             @Cached("fn.callTarget") cachedCallTarget: RootCallTarget,

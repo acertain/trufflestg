@@ -51,8 +51,8 @@ dependencies {
   implementation("org.graalvm.sdk:launcher-common:$graalVersion")
   implementation("org.graalvm.truffle:truffle-api:$graalVersion")
   testImplementation("org.graalvm.compiler:compiler:$graalVersion")
-  "kapt"("org.graalvm.truffle:truffle-api:$graalVersion")
-  "kapt"("org.graalvm.truffle:truffle-dsl-processor:$graalVersion")
+  kapt("org.graalvm.truffle:truffle-api:$graalVersion")
+  kapt("org.graalvm.truffle:truffle-dsl-processor:$graalVersion")
   testImplementation("org.junit.jupiter:junit-jupiter:5.5.2")
   implementation("org.jetbrains.kotlin:kotlin-script-runtime:1.4.30")
   implementation("org.jetbrains.kotlin:kotlin-reflect:1.4.30")
@@ -67,6 +67,7 @@ tasks.withType<KotlinCompile> {
   kotlinOptions {
     jvmTarget = JavaVersion.VERSION_1_8.toString()
     freeCompilerArgs += "-Xno-param-assertions"
+    freeCompilerArgs += "-Xopt-in=kotlin.RequiresOptIn"
   }
 }
 

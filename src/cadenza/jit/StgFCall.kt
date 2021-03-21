@@ -3,10 +3,13 @@ package cadenza.jit
 import cadenza.data.*
 import cadenza.panic
 import cadenza.stg_types.Stg
+import com.oracle.truffle.api.dsl.TypeSystemReference
 import com.oracle.truffle.api.frame.VirtualFrame
+import com.oracle.truffle.api.nodes.Node
 import java.lang.invoke.MethodHandle
 import java.lang.invoke.MethodHandles
 import java.nio.ByteBuffer
+import java.security.MessageDigest
 import kotlin.reflect.full.declaredFunctions
 import kotlin.reflect.jvm.javaMethod
 
@@ -14,28 +17,88 @@ object GlobalStore {
   var GHCConcSignalSignalHandlerStore: Any? = null
 }
 
-fun ByteArray.write(offset: Int, x: ByteArray) {
-  System.arraycopy(x, 0, this, offset, x.size)
-}
+@OptIn(ExperimentalUnsignedTypes::class)
+fun UInt.toByteArray(): ByteArray = toInt().toByteArray()
 fun Long.toByteArray(): ByteArray = ByteBuffer.allocate(8).putLong(this).array()
 fun Int.toByteArray(): ByteArray = ByteBuffer.allocate(4).putInt(this).array()
+
+fun ByteArray.write(offset: Int, x: ByteArray) { System.arraycopy(x, 0, this, offset, x.size) }
+fun ByteArray.write(offset: Int, x: Long) { write(offset,x.toByteArray()) }
+fun ByteArray.write(offset: Int, x: Int) { write(offset,x.toByteArray()) }
+@OptIn(ExperimentalUnsignedTypes::class)
+fun ByteArray.write(offset: Int, x: UInt) { write(offset,x.toByteArray()) }
 
 val zeroBytes: ByteArray = byteArrayOf(0, 0, 0, 0, 0, 0, 0, 0)
 
 var globalHeap = ByteArray(0)
 
-@Suppress("unused", "FunctionName", "UNUSED_PARAMETER")
-object PrimFCalls {
-  @JvmStatic fun hs_free_stable_ptr(x: StablePtr, y: VoidInh): Any {
-    // FIXME: getting "deRefStablePtr after freeStablePtr"
-//    x.x = null
-    return UnboxedTuple(arrayOf())
+class StgFCall(
+  val x: Stg.ForeignCall,
+  @field:Children val args: Array<Arg>
+) : Code(null) {
+  val name: String = (x.ctarget as Stg.CCallTarget.StaticTarget).string
+  @field:Child var opNode: StgPrimOp? = primFCalls[name]?.let { it() }
+
+//  val mh: MethodHandle? = primFCalls[]
+//  val invoker: MethodHandle? = mh?.let { MethodHandles.spreadInvoker(it.type(), 0).bindTo(it) }
+
+  override fun execute(frame: VirtualFrame): Any {
+    val xs = map(args) { it.execute(frame) }
+//    if (x.ctarget is Stg.CCallTarget.DynamicTarget) TODO()
+    if (opNode != null) {
+      return opNode!!.run(frame, xs)
+    } else {
+      panic{"foreign call nyi $name"}
+    }
   }
-  @JvmStatic fun localeEncoding(x: VoidInh): Any =
-    UnboxedTuple(arrayOf(StgAddr("UTF-8".toByteArray() + zeroBytes,0)))
-  @JvmStatic fun stg_sig_install(x: StgInt, y: StgInt, z: NullAddr, w: VoidInh): Any =
+}
+
+var md5: MessageDigest? = null
+
+val primFCalls: Map<String, () -> StgPrimOp> = mapOf(
+  // TODO: do something safer! (use x to store MessageDigest object?)
+  "__hsbase_MD5Init" to wrap2 { x: StgAddr, y: VoidInh ->
+    if (md5 != null) panic("")
+    md5 = MessageDigest.getInstance("MD5")
+    y
+  },
+  "__hsbase_MD5Update" to wrap4 { _: StgAddr, y: StgAddr, z: StgInt, v: VoidInh ->
+    val c = y.arr.copyOfRange(y.offset, y.offset + z.x.toInt())
+    md5!!.update(c)
+    v
+  },
+  "__hsbase_MD5Final" to wrap3 { out: StgAddr, _: StgAddr, v: VoidInh ->
+    out.arr.write(out.offset, md5!!.digest())
+    md5 = null
+    v
+  },
+
+  "rts_setMainThread" to wrap2 { x: WeakRef, _: VoidInh -> UnboxedTuple(arrayOf()) },
+  "getOrSetGHCConcSignalSignalHandlerStore" to wrap2 { a: StablePtr, _: VoidInh ->
+    synchronized(GlobalStore) {
+      val x = GlobalStore.GHCConcSignalSignalHandlerStore
+      UnboxedTuple(arrayOf(if (x == null) {
+        GlobalStore.GHCConcSignalSignalHandlerStore = a
+        a
+      } else { x }))
+    }
+  },
+  // TODO
+  "isatty" to wrap2 { x: StgInt, _: VoidInh -> UnboxedTuple(arrayOf(StgInt(if (x.x in 0..2) 1L else 0L))) },
+
+  "hs_free_stable_ptr" to wrap2 { x: StablePtr, _: VoidInh ->
+    // FIXME: getting "deRefStablePtr after freeStablePtr", so i'm disabling this for now
+//    x.x = null
+    UnboxedTuple(arrayOf())
+  },
+  "localeEncoding" to wrap1 { _: VoidInh ->
+    UnboxedTuple(arrayOf(StgAddr("UTF-8".toByteArray() + zeroBytes, 0)))
+  },
+  "stg_sig_install" to wrap4 { x: StgInt, y: StgInt, z: NullAddr, _: VoidInh ->
+    // TODOs
     UnboxedTuple(arrayOf(StgInt(-1)))
-  @JvmStatic fun getProgArgv(argc: StgAddr, argv: StgAddr, v: VoidInh): Any {
+  },
+  "getProgArgv" to wrap3 { argc: StgAddr, argv: StgAddr, v: VoidInh ->
     // TODO: put argc & argv into new arrays, make **argc = get_argc(), i think??
     argc.arr.write(0, 1.toByteArray())
 
@@ -45,52 +108,11 @@ object PrimFCalls {
     val argvIx = globalHeap.size.toLong().toByteArray()
     globalHeap += ix
 
-    argv.arr.write(0, argvIx)
-    return UnboxedTuple(arrayOf())
-  }
-
-  // TODO: i think this is what ghc does?
-  @JvmStatic fun u_towupper(x: StgInt, w: RealWorld): Any =
+    argv.arr.write(0,argvIx)
+    UnboxedTuple(arrayOf())
+  },
+  "u_towupper" to wrap2 { x: StgInt, w: RealWorld ->
     UnboxedTuple(arrayOf(StgInt(Character.toUpperCase(x.x.toInt()).toLong())))
-}
-
-val lookup: MethodHandles.Lookup = MethodHandles.publicLookup()
-
-val primFCalls: Map<String, MethodHandle> =
-  PrimFCalls::class.declaredFunctions.associate {
-    val m = it.javaMethod!!
-    m.name to lookup.unreflect(m)
   }
-
-
-class StgFCall(
-  val x: Stg.ForeignCall,
-  @field:Children val args: Array<Arg>
-) : Code(null) {
-  val mh: MethodHandle? = primFCalls[(x.ctarget as Stg.CCallTarget.StaticTarget).string]
-  val invoker: MethodHandle? = mh?.let { MethodHandles.spreadInvoker(it.type(), 0).bindTo(it) }
-
-  override fun execute(frame: VirtualFrame): Any {
-    val xs = map(args) { it.execute(frame) }
-    if (x.ctarget is Stg.CCallTarget.DynamicTarget) TODO()
-    val op = (x.ctarget as Stg.CCallTarget.StaticTarget).string
-    return when (op) {
-      // TODO: stub
-      "rts_setMainThread" -> UnboxedTuple(arrayOf())
-      "getOrSetGHCConcSignalSignalHandlerStore" -> {
-        synchronized(GlobalStore) {
-          val x = GlobalStore.GHCConcSignalSignalHandlerStore
-          return UnboxedTuple(arrayOf(if (x == null) {
-            GlobalStore.GHCConcSignalSignalHandlerStore = xs[0]
-            xs[0]
-          } else { x }))
-        }
-      }
-      else ->
-        if (invoker != null) { invoker.invokeExact(xs) }
-        else { panic{"$this"} }
-    }
-  }
-}
-
+)
 

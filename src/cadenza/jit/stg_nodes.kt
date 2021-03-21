@@ -236,16 +236,18 @@ fun Stg.Rhs.fixupFvs(m: Module): Set<Stg.BinderId> = when (this) {
 
 
 sealed class TopLevel(
-  val binder: Stg.SBinder
+  val binder: Stg.SBinder,
+  val module: Module,
 ) {
   val name: String = binder.name
+  val fullName: String = module.fullName + "." + name
   abstract fun getValue(): Any
 
   class Function(
     module: Module,
     binder: Stg.SBinder,
     body: Stg.Rhs.StgRhsClosure
-  ) : TopLevel(binder) {
+  ) : TopLevel(binder, module) {
     val closure: Any by lazy {
       body.fixupFvs(module)
       val fd = FrameDescriptor()
@@ -255,9 +257,10 @@ sealed class TopLevel(
     override fun getValue(): Any = closure
   }
   class StringLit(
+    module: Module,
     binder: Stg.SBinder,
     val string: ByteArray
-  ) : TopLevel(binder) {
+  ) : TopLevel(binder, module) {
     val x = StgAddr(string, 0)
     override fun getValue(): Any = x
   }
@@ -265,7 +268,7 @@ sealed class TopLevel(
     module: Module,
     binder: Stg.SBinder,
     con: Stg.Rhs.StgRhsCon
-  ) : TopLevel(binder) {
+  ) : TopLevel(binder, module) {
     val con: Any by lazy {
       val fd = FrameDescriptor()
       val fr = Truffle.getRuntime().createVirtualFrame(arrayOf(), fd)
@@ -294,10 +297,11 @@ class CborModuleDir(
   }
 }
 
-
+// contents of magic GHC.Prim module
 val prims: Map<String,Any> = mapOf(
   "void#" to VoidInh,
-  "realWorld#" to RealWorld
+  "realWorld#" to RealWorld,
+  "coercionToken#" to VoidInh,
 //  "void#" to
 )
 
@@ -306,7 +310,9 @@ class Module(
   val moduleDir: CborModuleDir,
   src: Stg.Module
 ) {
+  val unitId: String = src.unitId.x
   val name: String = src.name.x
+  val fullName = unitId + ":" + name
 
   val external_ids: Map<Stg.BinderId, Pair<Pair<Stg.UnitId, Stg.ModuleName>, Stg.SBinder>> =
     src.externalTopIds
@@ -324,7 +330,7 @@ class Module(
         is Stg.Binding.StgNonRec -> listOf(rhs(it.x.x, it.x.y))
         is Stg.Binding.StgRec -> it.x.x.map { x -> rhs(x.first, x.second) }
       }
-      is Stg.TopBinding.StgTopStringLit -> listOf(TopLevel.StringLit(it.x, it.y))
+      is Stg.TopBinding.StgTopStringLit -> listOf(TopLevel.StringLit(this, it.x, it.y))
     }
   }.associateBy { it.binder.binderId }
 
@@ -343,7 +349,7 @@ class Module(
       val x = external_ids[id]!!
       if (x.first.second.x == "GHC.Prim") {
         val n = x.second.name
-        prims[x.second.name] ?: TODO("PrimOp GHC.Prim.$n not implemented: $x")
+        prims[x.second.name] ?: TODO("GHC.Prim.$n not implemented: $x")
       } else {
         moduleDir[x.first.second.x]!![x.second.name]!!
       }

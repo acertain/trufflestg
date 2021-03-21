@@ -182,7 +182,7 @@ abstract class CaseAlts : Node() {
         if (x is StgData && x.con === DataCon("ghc-prim", "GHC.Prim", "Unit#") && arity == 1) {
           frame.setObject(fieldSlots[0], x.args[0])
         } else {
-          if (x !is cadenza.data.UnboxedTuple ) { panic("CaseUnboxedTuple") }
+          if (x !is cadenza.data.UnboxedTuple) { panic{"CaseUnboxedTuple of $x"} }
           if (x.x.size != arity) { panic("CaseUnboxedTuple: wrong arity") }
           fieldSlots.forEachIndexed  { ix, sl -> frame.setObject(sl, x.x[ix]) }
         }
@@ -231,6 +231,8 @@ abstract class Arg : Node() {
 
   class Global(
     val module: Module,
+    // TODO
+//    val name: String,
     val id: Stg.BinderId
   ) : Var() {
     @field:CompilerDirectives.CompilationFinal var isResolved: Boolean = false
@@ -250,6 +252,10 @@ abstract class Arg : Node() {
     val id: Stg.BinderId,
     val slot: FrameSlot
   ): Var() {
+    // TODO: executeStgInt etc, but only once i have nodes that would use them
+    // executeLong only helps if i have nodes that are easier to PE if called with them, i think
+    // TODO: if i know the expected type, i can setWhatever after getObject, which should help PE & might help graal(?)
+    // also could do the same in ClosureRootNode
     override fun execute(frame: VirtualFrame): Any {
       return frame.getObject(slot) ?: panic("null Local")
     }
@@ -311,6 +317,12 @@ abstract class Rhs : Node() {
     @field:Children val args: Array<Arg>
   ) : Rhs() {
     @ExplodeLoop
-    override fun execute(frame: VirtualFrame): Any = StgData(con, map(args) { it.execute(frame) })
+    override fun execute(frame: VirtualFrame): Any {
+      val xs = map(args) { it.execute(frame) }
+      if (con.unitId.x == "ghc-prim" && con.module.x == "GHC.Prim" == con.name.startsWith("(#")) {
+        return UnboxedTuple(xs)
+      }
+      return StgData(con, xs)
+    }
   }
 }

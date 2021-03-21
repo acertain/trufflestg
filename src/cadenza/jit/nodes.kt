@@ -136,7 +136,9 @@ open class ClosureRootNode(
 
   override fun getSourceSection(): SourceSection? = srcSection //loc?.let { source.section(it) }
 //  override fun isInstrumentable() = loc !== null
-  override fun getName() = "closure"
+  override fun getQualifiedName() = parentTopLevel.fullName
+  override fun getName() = parentTopLevel.fullName
+//  override fun getName() = parentTopLevel.name
 
   override fun isCloningAllowed() = true
 }

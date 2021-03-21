@@ -6,7 +6,6 @@ import cadenza.panic
 import cadenza.stg_types.Stg
 import cadenza.todo
 import com.oracle.truffle.api.CompilerDirectives
-import com.oracle.truffle.api.dsl.ReportPolymorphism
 import com.oracle.truffle.api.dsl.Specialization
 import com.oracle.truffle.api.dsl.TypeSystemReference
 import com.oracle.truffle.api.frame.VirtualFrame
@@ -30,7 +29,7 @@ class StgPrim(
   @field:Children val args: Array<Arg>
 ) : Code(null) {
   @field:Node.Child
-  var opNode: StgPrimOp? = primOpss[op]?.let { it() }
+  var opNode: StgPrimOp? = primOps[op]?.let { it() }
 
   @ExplodeLoop
   internal fun args(frame: VirtualFrame): Array<Any> = map(args) { it.execute(frame) }
@@ -46,12 +45,13 @@ class StgPrim(
 }
 
 // TODO: should prims of type -> IO () return VoidInh or UnboxedTuple(arrayOf()) ?
-val primOpss: Map<String, () -> StgPrimOp> = mapOf(
+@OptIn(ExperimentalUnsignedTypes::class)
+val primOps: Map<String, () -> StgPrimOp> = mapOf(
   // TODO: CallWhnf
   "catch#" to wrap3 { x: Closure, y: Closure, z: VoidInh ->
     // TODO: do i need to box the return value as a unboxed tuple?
     try { x.call(arrayOf(RealWorld)) }
-    // TODO: should this catch all non-truffle exceptions?
+    // TODO: should this catch java exceptions?
     catch (e: HaskellException) { y.call(arrayOf(e.x, RealWorld)) }
   },
   "maskAsyncExceptions#" to wrap2 { x: Closure, _: VoidInh -> x.call(arrayOf(RealWorld)) },
@@ -59,8 +59,10 @@ val primOpss: Map<String, () -> StgPrimOp> = mapOf(
 
   "+#" to wrap2 { x: StgInt, y: StgInt -> StgInt(x.x + y.x) },
   "-#" to wrap2 { x: StgInt, y: StgInt -> StgInt(x.x - y.x) },
+  "*#" to wrap2 { x: StgInt, y: StgInt -> StgInt(x.x * y.x) },
   "<=#" to wrap2 { x: StgInt, y: StgInt -> StgInt(if (x.x <= y.x) 1L else 0L) },
   ">#" to wrap2 { x: StgInt, y: StgInt -> StgInt(if (x.x > y.x) 1L else 0L) },
+  "==#" to wrap2 { x: StgInt, y: StgInt -> StgInt(if (x.x == y.x) 1L else 0L) },
 
   "newMVar#" to wrap1 { x: VoidInh -> UnboxedTuple(arrayOf(StgMVar(false, null))) },
   "putMVar#" to wrap3 { x: StgMVar, y: Any, z: VoidInh ->
@@ -87,6 +89,7 @@ val primOpss: Map<String, () -> StgPrimOp> = mapOf(
   "makeStablePtr#" to wrap2 { x: Any, _: VoidInh -> UnboxedTuple(arrayOf(StablePtr(x))) },
 
   "mkWeakNoFinalizer#" to wrap3 { x: Any, y: Any, _: VoidInh -> UnboxedTuple(arrayOf(WeakRef(x, y))) },
+  "mkWeak#" to wrap4 { x: Any, y: Any, z: Any, _: VoidInh -> UnboxedTuple(arrayOf(WeakRef(x, y, z))) },
 
   // TODO
   "getMaskingState#" to wrap1 { _: VoidInh -> UnboxedTuple(arrayOf(StgInt(0))) },
@@ -108,6 +111,7 @@ val primOpss: Map<String, () -> StgPrimOp> = mapOf(
   "int2Word#" to wrap1 { x: StgInt -> StgWord(x.x.toULong()) },
   "word2Int#" to wrap1 { x: StgWord -> StgInt(x.x.toLong()) },
   "narrow8Word#" to wrap1 { x: StgWord -> StgWord(x.x.toUByte().toULong()) },
+  "narrow32Int#" to wrap1 { x: StgInt -> StgInt(x.x.toInt().toLong()) },
 
   "leWord#" to wrap2 { x: StgWord, y: StgWord -> StgInt(if (x.x < y.x) 1L else 0L) },
 
@@ -124,35 +128,44 @@ val primOpss: Map<String, () -> StgPrimOp> = mapOf(
     UnboxedTuple(arrayOf(StgInt(x[y.toInt()].toLong()))) },
   "readInt32OffAddr#" to wrap3 { x: StgAddr, y: StgInt, z: VoidInh ->
     UnboxedTuple(arrayOf(StgInt(ByteBuffer.wrap(x.arr).getInt(y.toInt()).toLong()))) },
+  "readWord8OffAddr#" to wrap3 { x: StgAddr, y: StgInt, z: VoidInh ->
+    UnboxedTuple(arrayOf(StgWord(x[y.toInt()].toULong()))) },
   "readAddrOffAddr#" to wrap3 { x: StgAddr, y: StgInt, z: VoidInh ->
     val l = ByteBuffer.wrap(x.arr).getLong(y.toInt()).toInt()
     // FIXME: need to not have globalHeap reallocate...
     val w = StgAddr(globalHeap, l)
     UnboxedTuple(arrayOf(w))
   },
+  "writeWord8OffAddr#" to wrap4 { x: StgAddr, y: StgInt, z: StgWord, v: VoidInh -> x[y] = z.x.toByte(); v },
 
   "plusAddr#" to wrap2 { x: StgAddr, y: StgInt -> StgAddr(x.arr, x.offset + y.x.toInt()) },
 
+  // TODO: make sure these are right
   "uncheckedIShiftL#" to wrap2 { x: StgInt, y: StgInt -> StgInt(x.x shl y.x.toInt()) },
+  "uncheckedShiftRL#" to wrap2 { x: StgWord, y: StgInt -> StgWord(x.x shr y.x.toInt()) },
+  "uncheckedShiftL#" to wrap2 { x: StgWord, y: StgInt -> StgWord(x.x shl y.x.toInt()) },
+  "or#" to wrap2 { x: StgWord, y: StgWord -> StgWord(x.x or y.x) },
 
   // TODO?
-  "touch#" to wrap2 { x: StgByteArray, y: VoidInh -> y },
+  "touch#" to wrap2 { x: StgMutableByteArray, y: VoidInh -> y },
 
   "raise#" to wrap1 { e: Any -> (throw HaskellException(e)) as VoidInh },
-  "raiseIO#" to wrap2 { e: Any, y: VoidInh -> (throw HaskellException(e)) as VoidInh },
-
+  "raiseIO#" to wrap2 { e: Any, _: VoidInh -> (throw HaskellException(e)) as VoidInh },
 
   // TODO: actually pin & align? only matters if we want to use native code
   // FIXME: or for readAddrOffAddr, or if casted to Addr?
-  "newAlignedPinnedByteArray#" to wrap3 { x: StgInt, alignment: StgInt, v: VoidInh ->
+  "newAlignedPinnedByteArray#" to wrap3 { x: StgInt, alignment: StgInt, _: VoidInh ->
     UnboxedTuple(arrayOf(StgMutableByteArray(ByteArray(x.toInt())))) },
-  "unsafeFreezeByteArray#" to wrap2 { arr: StgMutableByteArray, v: VoidInh ->
-    UnboxedTuple(arrayOf(StgByteArray(arr.arr))) },
-  "byteArrayContents#" to wrap1 { arr: StgByteArray -> StgAddr(arr.arr, 0) }
+  "newPinnedByteArray#" to wrap2 { x: StgInt, _: VoidInh ->
+    UnboxedTuple(arrayOf(StgMutableByteArray(ByteArray(x.toInt())))) },
+  "unsafeFreezeByteArray#" to wrap2 { arr: StgMutableByteArray, _: VoidInh ->
+    arr.frozen = true
+    UnboxedTuple(arrayOf(arr)) },
+  "byteArrayContents#" to wrap1 { arr: StgMutableByteArray -> StgAddr(arr.arr, 0) }
 )
 
 
-// this makes a new real (static) class & returns the constructor
+// this makes a class per call site
 inline fun <reified X, reified Y> wrap1(crossinline f: (X) -> Y): () -> StgPrimOp = {
   object : StgPrimOp1() { override fun execute(x: Any): Any = f(x as X) as Any }
 }
@@ -168,7 +181,6 @@ inline fun <reified X, reified Y, reified Z, reified W, reified A> wrap4(crossin
 
 
 @TypeSystemReference(DataTypes::class)
-@ReportPolymorphism
 abstract class StgPrimOp(val arity: Int) : Node() {
   abstract fun run(frame: VirtualFrame, args: Array<Any>): Any
 }

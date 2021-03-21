@@ -4,6 +4,7 @@
  */
 
 // Modified to transferToInterpreter before throwing any exceptions :)
+// TODO: make sure this works outside Truffle context (or write a version that does)
 
 package kotlin.jvm.internal;
 
