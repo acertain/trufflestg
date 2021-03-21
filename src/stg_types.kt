@@ -11,6 +11,7 @@ import java.nio.ByteBuffer
 import java.util.*
 import kotlin.reflect.typeOf
 
+@Suppress("EXPERIMENTAL_FEATURE_WARNING")
 class Stg {
 
   // cborg encodes chars as strings

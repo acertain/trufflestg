@@ -178,15 +178,10 @@ abstract class CaseAlts : Node() {
     @field:Child var body: Code
   ): CaseAlts() {
     override fun execute(frame: VirtualFrame, x: Any?): Any? {
-      // TODO: i think this is safe since unboxed tuples can't be thunks?
       if (arity > 0) {
-        if (x is StgData && x.con === DataCon("ghc-prim", "GHC.Prim", "Unit#") && arity == 1) {
-          frame.setObject(fieldSlots[0], x.args[0])
-        } else {
-          if (x !is cadenza.data.UnboxedTuple) { panic{"CaseUnboxedTuple of $x"} }
-          if (x.x.size != arity) { panic("CaseUnboxedTuple: wrong arity") }
-          fieldSlots.forEachIndexed  { ix, sl -> frame.setObject(sl, x.x[ix]) }
-        }
+        if (x !is cadenza.data.UnboxedTuple) { panic{"CaseUnboxedTuple of $x"} }
+        if (x.x.size != arity) { panic("CaseUnboxedTuple: wrong arity") }
+        fieldSlots.forEachIndexed  { ix, sl -> frame.setObject(sl, x.x[ix]) }
       }
       return body.execute(frame)
     }
@@ -300,7 +295,10 @@ abstract class Rhs : Node() {
     override fun execute(frame: VirtualFrame): Any = when {
       updFlag == Stg.UpdateFlag.Updatable && arity == 0 -> Thunk(Closure(captureEnv(frame), arrayOf(), arity, callTarget), null)
       updFlag == Stg.UpdateFlag.ReEntrant && arity > 0 -> Closure(captureEnv(frame), arrayOf(), arity, callTarget)
-      else -> todo
+      // TODO: ghc says SingleEntry = don't need to blackhole or update http://hackage.haskell.org/package/ghc-8.10.2/docs/src/StgSyn.html#UpdateFlag
+      // TODO: is this right?
+      updFlag == Stg.UpdateFlag.SingleEntry && arity == 0 -> Closure(captureEnv(frame), arrayOf(), arity, callTarget)
+      else -> panic("todo")
     }   //Closure(captureEnv(frame), arrayOf(), arity, callTarget)
 //    override fun executeClosure(frame: VirtualFrame): Closure = Closure(captureEnv(frame), arrayOf(), arity, callTarget)
 
@@ -320,7 +318,8 @@ abstract class Rhs : Node() {
     @ExplodeLoop
     override fun execute(frame: VirtualFrame): Any {
       val xs = map(args) { it.execute(frame) }
-      if (con.unitId.x == "ghc-prim" && con.module.x == "GHC.Prim" == con.name.startsWith("(#")) {
+      if (con.unitId.x == "ghc-prim" && con.module.x == "GHC.Prim" &&
+          (con.name.startsWith("(#") || con.name == "Unit#")) {
         return UnboxedTuple(xs)
       }
       return StgData(con, xs)

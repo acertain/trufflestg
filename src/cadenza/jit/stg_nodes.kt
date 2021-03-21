@@ -92,26 +92,6 @@ fun Stg.Expr.compile(ci: CompileInfo, fd: FrameDescriptor, tc: Boolean): Code = 
       default?.rhs?.compile(ci, fd, true)
     )
   }
-//    is Stg.AltType.PrimAlt -> when {
-//      alts.all { (it.con is Stg.AltCon.AltDefault || it.con is Stg.AltCon.AltLit) && it.binders.isEmpty() } -> {
-//        val default = alts.find { it.con is Stg.AltCon.AltDefault }
-//        val ty = when (altTy.r) {
-//          is Stg.PrimRep.IntRep -> StgPrimType.StgInt
-//          else -> TODO("${altTy.r}")
-//        }
-//        Code.CasePrim(
-//          x.compile(ci, fd, false),
-//          fd.addFrameSlot(bnd.binderId),
-//          alts.filter { it.con is Stg.AltCon.AltLit }.map {
-//            Pair(ty.parseLit((it.con as Stg.AltCon.AltLit).x), it.rhs.compile(ci, fd, true))
-//          }.toTypedArray(),
-//          ty,
-//          default?.rhs?.compile(ci, fd, true)
-//        )
-//      }
-//      else -> TODO("$this")
-//    }
-//  }
   is Stg.Expr.StgConApp -> Code.ConApp(Rhs.ArgCon(ci.module.dataCons[x]!!, map(args) { it.compile(ci, fd) }))
   is Stg.Expr.StgLet -> when (x) {
     is Stg.Binding.StgNonRec -> Code.Let(fd.addFrameSlot(x.x.binderId), x.y.compile(x.x, ci, fd), body.compile(ci, fd, tc))

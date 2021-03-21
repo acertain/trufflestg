@@ -152,6 +152,7 @@ val graalArgs = listOf(
   "-Dgraal.Dump=Truffle",
   "-Dgraal.PrintGraph=Network",
   "-Dgraal.CompilationFailureAction=ExitVM",
+  "-ea",
 //  "-Dgraal.TraceTruffleCompilation=true",
 //  "-Dgraal.TraceTruffleSplitting=true",
 //  "-Dgraal.TruffleTraceSplittingSummary=true",

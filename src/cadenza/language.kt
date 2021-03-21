@@ -154,18 +154,14 @@ class Language : TruffleLanguage<Language.Context>() {
     val d = CborModuleDir(this, path)
 
     val y = d["Main"]!!["main"]!!
-    val w = whnf(y)
-    val z = whnf(w) as Closure
+    val z = whnf(y) as Closure
 
-//    println(z.rootNode.argBinders[0])
-
-    val q = whnf(try {
-      z.apply(arrayOf(RealWorld))
-//      z.callTarget.call(0L, VoidInh)
+    val q = try {
+      z.call(arrayOf(RealWorld))
     } catch (e: Exception) {
       e.printStackTrace()
       throw e
-    })
+    }
 
     println(q)
 

@@ -102,6 +102,7 @@ val primOps: Map<String, () -> StgPrimOp> = mapOf(
   "narrow32Int#" to wrap1 { x: StgInt -> StgInt(x.x.toInt().toLong()) },
 
   "leWord#" to wrap2 { x: StgWord, y: StgWord -> StgInt(if (x.x < y.x) 1L else 0L) },
+  "eqWord#" to wrap2 { x: StgWord, y: StgWord -> StgInt(if (x.x == y.x) 1L else 0L) },
 
   "eqChar#" to wrap2 { x: StgChar, y: StgChar -> StgInt(if (x.x == y.x) 1L else 0L) },
 

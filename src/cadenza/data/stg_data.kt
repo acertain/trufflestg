@@ -17,8 +17,20 @@ object RealWorld
 
 object NullAddr
 
-
-// data constr
+//
+//// data constr
+//
+//data class FullName(
+//  val unitId: Stg.UnitId,
+//  val module: Stg.ModuleName,
+//  val name: String
+//) {
+//  override fun toString(): String = unitId + ":"
+//}
+//
+//data class TyCon(
+//  val
+//)
 
 data class DataCon private constructor(
   val unitId: Stg.UnitId,

@@ -24,6 +24,7 @@ fun whnf(x: Any): Any = when(x) {
   else -> x
 }
 
+// TODO: selector thunks
 class Thunk(
   var clos: Closure?,
   var value_: Any?
@@ -72,6 +73,7 @@ class Closure (
     get() = callTarget.rootNode as ClosureRootNode
 
   init {
+    assert(arity >= 0)
     assert(env != null == (callTarget.rootNode as ClosureRootNode).isSuperCombinator()) { "calling convention mismatch" }
     assert(arity + papArgs.size == (callTarget.rootNode as ClosureRootNode).arity)
   }
@@ -86,25 +88,16 @@ class Closure (
     )
   }
 
-  // returns a Closure or a Thunk
-  fun apply(arguments: Array<Any?>): Any = when {
-    arity == arguments.size -> Thunk(pap(arguments), null)
-    arity < arguments.size -> pap(arguments)
-    else -> TODO()
-  }
-
   fun call(): Any {
     if (arity != 0) { throw Exception("Closure.call: bad arity") }
     val args = if (env != null) arrayOf(0L, env, *papArgs) else arrayOf(0L, *papArgs)
     return CallUtils.callTarget(callTarget, args)
   }
 
-  fun call(args: Array<Any?>): Any {
-    val x = apply(args)
-    val r = (x as Thunk).whnf()
-    if (r is Closure) { panic("Closure.call whnf returned a closure?") }
-    return r
-//    return ((x as Thunk).whnf() as Closure).call()
+  fun call(args: Array<Any?>): Any = when {
+    args.size < arity -> pap(args)
+    args.size == arity -> pap(args).call()
+    else -> (call(take(arity, args)) as Closure).call(drop(arity, args))
   }
 
 //  @ExportMessage
@@ -146,8 +139,7 @@ class Closure (
   // construct a partial application node, which should check that it is a PAP itself
   @CompilerDirectives.TruffleBoundary
   fun pap(@Suppress("UNUSED_PARAMETER") arguments: Array<out Any?>): Closure {
-    val len = arguments.size
-    return Closure(env, append(papArgs, arguments), arity - len, callTarget)
+    return Closure(env, append(papArgs, arguments), arity - arguments.size, callTarget)
   }
 }
 
