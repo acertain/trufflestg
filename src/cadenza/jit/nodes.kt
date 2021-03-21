@@ -93,7 +93,8 @@ open class ClosureRootNode(
   val module: Module,
   // the stg TopLevel we are in
   val parentTopLevel: TopLevel,
-  val srcSection: SourceSection?
+  val srcSection: SourceSection?,
+  val updFlag: Stg.UpdateFlag,
 ) : CadenzaRootNode(language, frameDescriptor) {
   val bloomFilterSlot: FrameSlot = frameDescriptor.findOrAddFrameSlot("<TCO Bloom Filter>")
   @field:Child var selfTailCallLoopNode = SelfTailCallLoop(body, this)

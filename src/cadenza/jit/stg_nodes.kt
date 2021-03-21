@@ -169,7 +169,8 @@ fun Stg.Rhs.StgRhsClosure.compileC(bi: Stg.SBinder, ci: CompileInfo, fd: FrameDe
         ClosureBody(bodyCode),
         ci.module,
         ci.topLevel,
-        bi.defLoc.build()
+        bi.defLoc.build(),
+        upd
       )
     )
   )

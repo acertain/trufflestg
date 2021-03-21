@@ -160,7 +160,7 @@ val primOps: Map<String, () -> StgPrimOp> = mapOf(
   "or#" to wrap2 { x: StgWord, y: StgWord -> StgWord(x.x or y.x) },
 
   // TODO?
-  "touch#" to wrap2 { x: StgMutableByteArray, y: VoidInh -> y },
+  "touch#" to wrap2 { x: Any, y: VoidInh -> y },
 
   "raise#" to wrap1 { e: Any -> (throw HaskellException(e)) as VoidInh },
   "raiseIO#" to wrap2 { e: Any, _: VoidInh -> (throw HaskellException(e)) as VoidInh },

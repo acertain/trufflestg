@@ -294,7 +294,7 @@ abstract class Rhs : Node() {
     // might help escape analysis w/ App
     override fun execute(frame: VirtualFrame): Any = when {
       updFlag == Stg.UpdateFlag.Updatable && arity == 0 -> Thunk(Closure(captureEnv(frame), arrayOf(), arity, callTarget), null)
-      updFlag == Stg.UpdateFlag.ReEntrant && arity > 0 -> Closure(captureEnv(frame), arrayOf(), arity, callTarget)
+      updFlag == Stg.UpdateFlag.ReEntrant -> Closure(captureEnv(frame), arrayOf(), arity, callTarget)
       // TODO: ghc says SingleEntry = don't need to blackhole or update http://hackage.haskell.org/package/ghc-8.10.2/docs/src/StgSyn.html#UpdateFlag
       // TODO: is this right?
       updFlag == Stg.UpdateFlag.SingleEntry && arity == 0 -> Closure(captureEnv(frame), arrayOf(), arity, callTarget)
