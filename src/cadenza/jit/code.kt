@@ -188,7 +188,7 @@ abstract class CaseAlts : Node() {
   }
 
   class AlgAlts(
-    val ty: Stg.STyCon,
+    val ty: TyCon,
     @CompilerDirectives.CompilationFinal(dimensions = 1) val cons: Array<Pair<DataCon,Array<FrameSlot>>>,
     @field:Children val bodies: Array<Code>
   ): CaseAlts() {
@@ -318,8 +318,8 @@ abstract class Rhs : Node() {
     @ExplodeLoop
     override fun execute(frame: VirtualFrame): Any {
       val xs = map(args) { it.execute(frame) }
-      if (con.unitId.x == "ghc-prim" && con.module.x == "GHC.Prim" &&
-          (con.name.startsWith("(#") || con.name == "Unit#")) {
+      if (con.name.unitId == "ghc-prim" && con.name.module == "GHC.Prim" &&
+          (con.name.name.startsWith("(#") || con.name.name == "Unit#")) {
         return UnboxedTuple(xs)
       }
       return StgData(con, xs)

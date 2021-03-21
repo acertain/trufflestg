@@ -1,5 +1,6 @@
 package cadenza.data
 
+import cadenza.panic
 import cadenza.stg_types.Stg
 import com.oracle.truffle.api.CompilerDirectives
 import java.lang.ref.WeakReference
@@ -20,43 +21,54 @@ object NullAddr
 //
 //// data constr
 //
-//data class FullName(
-//  val unitId: Stg.UnitId,
-//  val module: Stg.ModuleName,
-//  val name: String
-//) {
-//  override fun toString(): String = unitId + ":"
-//}
-//
-//data class TyCon(
-//  val
-//)
 
-data class DataCon private constructor(
-  val unitId: Stg.UnitId,
-  val module: Stg.ModuleName,
+data class FullName(
+  val unitId: String,
+  val module: String,
   val name: String
 ) {
+  override fun toString(): String = "$unitId:$module.$name"
+}
+
+// annoyingly the construction needs to be done here to tie the knot :(
+class TyCon private constructor(
+  val name: FullName,
+  src: Stg.STyCon
+) {
+  val cons: Array<DataCon> = src.dataCons.map {
+    DataCon(FullName(name.unitId, name.module, it.name), this)
+  }.toTypedArray()
+
+  override fun equals(other: Any?): Boolean = this === other
+  override fun hashCode(): Int = name.hashCode()
+
   companion object {
-    val knownCstrs: MutableMap<DataCon, DataCon> = mutableMapOf()
+    // TODO: should the various global vars (this, fcall global mem, probably more) be stored in Context?
+    val knownTyCons: MutableMap<FullName, TyCon> = mutableMapOf()
 
-    operator fun invoke(
-      unitId: Stg.UnitId,
-      module: Stg.ModuleName,
-      name: String
-    ): DataCon {
-      val c = DataCon(unitId, module, name)
-      if (c in knownCstrs) return knownCstrs[c]!!
-      knownCstrs[c] = c
-      return c
+    fun parse(name: FullName, src: Stg.STyCon): TyCon {
+      val x = TyCon(name, src)
+      val y = knownTyCons[name]
+      if (y != null) {
+        // TODO: check also whatever else i put in DataCon
+        if(!x.cons.zip(y.cons).all { (a, b) -> a.name == b.name }) {
+          panic("trying to register a type with the same name but different constructors??")
+        }
+        return y
+      }
+      knownTyCons[name] = x
+      return x
     }
-
-    operator fun invoke(
-      unitId: String,
-      module: String,
-      name: String
-    ): DataCon = invoke(Stg.UnitId(unitId), Stg.ModuleName(module), name)
   }
+}
+
+// TODO: don't export constructor
+data class DataCon(
+  val name: FullName,
+  val ty: TyCon
+) {
+  override fun equals(other: Any?): Boolean = this === other
+  override fun hashCode(): Int = name.hashCode()
 }
 
 

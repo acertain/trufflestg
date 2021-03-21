@@ -9,10 +9,14 @@ import com.oracle.truffle.api.frame.VirtualFrame
 import com.oracle.truffle.api.nodes.ExplodeLoop
 import com.oracle.truffle.api.nodes.Node
 import cadenza.array_utils.map
+import cadenza.array_utils.toByteArray
+import cadenza.array_utils.write
+import com.oracle.truffle.api.dsl.NodeChild
 import java.nio.ByteBuffer
 
 
 class StgPrim(
+  val type: TyCon?,
   val op: String,
   @field:Children val args: Array<Arg>
 ) : Code(null) {
@@ -33,6 +37,8 @@ class StgPrim(
 }
 
 // TODO: should prims of type -> IO () return VoidInh or UnboxedTuple(arrayOf()) ?
+// TODO: understand strictness of prims taking lifted types
+// i think usually we need to whnf ourselves?
 @OptIn(ExperimentalUnsignedTypes::class)
 val primOps: Map<String, () -> StgPrimOp> = mapOf(
   // TODO: CallWhnf
@@ -43,13 +49,18 @@ val primOps: Map<String, () -> StgPrimOp> = mapOf(
     catch (e: HaskellException) { y.call(arrayOf(e.x, RealWorld)) }
   },
   "maskAsyncExceptions#" to wrap2 { x: Closure, _: VoidInh -> x.call(arrayOf(RealWorld)) },
-  "unmaskAsyncExceptions#" to wrap2 { x: Closure, _: VoidInh -> x.call(arrayOf(RealWorld)) },
+  // TODO: clean this up
+  "unmaskAsyncExceptions#" to { object : StgPrimOp(2) {
+    @field:Child var callWhnf = CallWhnf(1, false)
+    override fun run(frame: VirtualFrame, args: Array<Any>): Any = callWhnf.execute(frame, args[0], arrayOf(RealWorld))
+  }},
 
   "+#" to wrap2 { x: StgInt, y: StgInt -> StgInt(x.x + y.x) },
   "-#" to wrap2 { x: StgInt, y: StgInt -> StgInt(x.x - y.x) },
   "*#" to wrap2 { x: StgInt, y: StgInt -> StgInt(x.x * y.x) },
   "<=#" to wrap2 { x: StgInt, y: StgInt -> StgInt(if (x.x <= y.x) 1L else 0L) },
   ">#" to wrap2 { x: StgInt, y: StgInt -> StgInt(if (x.x > y.x) 1L else 0L) },
+  ">=#" to wrap2 { x: StgInt, y: StgInt -> StgInt(if (x.x >= y.x) 1L else 0L) },
   "==#" to wrap2 { x: StgInt, y: StgInt -> StgInt(if (x.x == y.x) 1L else 0L) },
 
   "newMVar#" to wrap1 { x: VoidInh -> UnboxedTuple(arrayOf(StgMVar(false, null))) },
@@ -106,6 +117,14 @@ val primOps: Map<String, () -> StgPrimOp> = mapOf(
 
   "eqChar#" to wrap2 { x: StgChar, y: StgChar -> StgInt(if (x.x == y.x) 1L else 0L) },
 
+  "tagToEnum#" to { object : StgPrimOp1() {
+    override fun execute(x: Any): Any {
+      val ty = (parent as StgPrim).type!!
+      // TODO: use statically-allocated constructors
+      return StgData(ty.cons[(x as StgInt).x.toInt()], arrayOf())
+    }}
+  },
+
   // just reads a byte
   // TODO: make sure this is right (maybe should be unsigned)?
   "indexCharOffAddr#" to wrap2 { x: StgAddr, y: StgInt ->
@@ -113,19 +132,24 @@ val primOps: Map<String, () -> StgPrimOp> = mapOf(
     if (off >= x.arr.size) { StgChar(0) }
       else StgChar(x.arr[off].toInt()) },
 
-  "readInt8OffAddr#" to wrap3 { x: StgAddr, y: StgInt, z: VoidInh ->
+  "readInt8OffAddr#" to wrap3 { x: StgAddr, y: StgInt, _: VoidInh ->
     UnboxedTuple(arrayOf(StgInt(x[y.toInt()].toLong()))) },
-  "readInt32OffAddr#" to wrap3 { x: StgAddr, y: StgInt, z: VoidInh ->
-    UnboxedTuple(arrayOf(StgInt(ByteBuffer.wrap(x.arr).getInt(y.toInt()).toLong()))) },
-  "readWord8OffAddr#" to wrap3 { x: StgAddr, y: StgInt, z: VoidInh ->
+  "readInt32OffAddr#" to wrap3 { x: StgAddr, y: StgInt, _: VoidInh ->
+    UnboxedTuple(arrayOf(StgInt(ByteBuffer.wrap(x.arr).getInt(4*y.toInt()).toLong()))) },
+  "readWord8OffAddr#" to wrap3 { x: StgAddr, y: StgInt, _: VoidInh ->
     UnboxedTuple(arrayOf(StgWord(x[y.toInt()].toULong()))) },
-  "readAddrOffAddr#" to wrap3 { x: StgAddr, y: StgInt, z: VoidInh ->
-    val l = ByteBuffer.wrap(x.arr).getLong(y.toInt()).toInt()
+  "readAddrOffAddr#" to wrap3 { x: StgAddr, y: StgInt, _: VoidInh ->
+    val l = ByteBuffer.wrap(x.arr).getLong(8*y.toInt()).toInt()
     // FIXME: need to not have globalHeap reallocate...
     val w = StgAddr(globalHeap, l)
     UnboxedTuple(arrayOf(w))
   },
   "writeWord8OffAddr#" to wrap4 { x: StgAddr, y: StgInt, z: StgWord, v: VoidInh -> x[y] = z.x.toByte(); v },
+
+  "readWideCharOffAddr#" to wrap3 { x: StgAddr, y: StgInt, _: VoidInh ->
+    UnboxedTuple(arrayOf(StgChar(ByteBuffer.wrap(x.arr).getInt(4*y.toInt())))) },
+  "writeWideCharOffAddr#" to wrap4 { x: StgAddr, y: StgInt, z: StgChar, v: VoidInh ->
+    x.arr.write(x.offset + 4*y.x.toInt(), z.x.toByteArray()); v },
 
   "plusAddr#" to wrap2 { x: StgAddr, y: StgInt -> StgAddr(x.arr, x.offset + y.x.toInt()) },
 

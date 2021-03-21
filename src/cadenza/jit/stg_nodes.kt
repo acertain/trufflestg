@@ -63,7 +63,7 @@ fun Stg.Expr.compile(ci: CompileInfo, fd: FrameDescriptor, tc: Boolean): Code = 
               it.rhs.compile(ci, fd, true))
           }.unzip()
           CaseAlts.AlgAlts(
-            ci.module.tyCons[altTy.x]!!.second,
+            ci.module.tyCons[altTy.x]!!,
             bs.toTypedArray(),
             cs.toTypedArray()
           )
@@ -113,7 +113,7 @@ fun Stg.Expr.compile(ci: CompileInfo, fd: FrameDescriptor, tc: Boolean): Code = 
   is Stg.Expr.StgOpApp -> when (op) {
     is Stg.StgOp.StgFCallOp -> StgFCall(op.x, map(args) { it.compile(ci, fd) })
     is Stg.StgOp.StgPrimCallOp -> StgPrimCall(op.x, map(args) { it.compile(ci, fd) })
-    is Stg.StgOp.StgPrimOp -> StgPrim(op.x, map(args) { it.compile(ci, fd) })
+    is Stg.StgOp.StgPrimOp -> StgPrim(ci.module.tyCons[tn.orElse(null)], op.x, map(args) { it.compile(ci, fd) })
   }
   is Stg.Expr.StgTick -> TODO("$this")
 }
@@ -131,7 +131,6 @@ fun Stg.SrcSpan.build(): SourceSection? = when (this) {
           .createSection(sp.sline, sp.scol, sp.eline, sp.ecol)
   is Stg.SrcSpan.UnhelpfulSpan -> null
 }
-
 
 // TODO: convert Let rhs=Ap into a Pap when possible (avoid unnecessary Closure indirection)
 fun Stg.Rhs.StgRhsClosure.compileC(bi: Stg.SBinder, ci: CompileInfo, fd: FrameDescriptor): Rhs {
@@ -315,13 +314,24 @@ class Module(
     }
   }.associateBy { it.binder.binderId }
 
-  val tyCons: Map<Stg.TyConId, Pair<Pair<Stg.UnitId, Stg.ModuleName>, Stg.STyCon>> =
-    src.tyCons
-      .flatMap { it.second.flatMap { x -> x.second.map { y -> y.id to ((it.first to x.first) to y) } } }
-      .associate { x -> x }
+//  val (tyCons, dataCons) = TODO()
 
-  val dataCons: Map<Stg.DataConId, DataCon> = tyCons.values
-      .flatMap { it.second.dataCons.map { x -> x.id to DataCon(it.first.first, it.first.second, x.name) } }.associate { x -> x }
+  val tyCons: Map<Stg.TyConId, TyCon>
+  val dataCons: Map<Stg.DataConId, DataCon>
+  init {
+    val tyCons1: Map<Stg.TyConId, Pair<FullName, Stg.STyCon>> =
+      src.tyCons
+        .flatMap { it.second.flatMap {
+          x -> x.second.map {
+          y -> y.id to (FullName(it.first.x, x.first.x, y.name) to y) } } }
+        .associate { x -> x }
+
+    tyCons = tyCons1.mapValues { y -> TyCon.parse(y.value.first, y.value.second) }
+
+    dataCons = tyCons1
+      .flatMap { it.value.second.dataCons.mapIndexed { ix, x -> x.id to tyCons[it.key]!!.cons[ix] } }.associate { x -> x }
+  }
+
 
   val names: Map<String, Stg.BinderId> = top_bindings.asIterable().associate { it.value.binder.name to it.key }
 
