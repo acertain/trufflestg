@@ -60,6 +60,7 @@ val primOps: Map<String, () -> StgPrimOp> = mapOf(
   "*#" to wrap2 { x: StgInt, y: StgInt -> StgInt(x.x * y.x) },
   "<=#" to wrap2 { x: StgInt, y: StgInt -> StgInt(if (x.x <= y.x) 1L else 0L) },
   ">#" to wrap2 { x: StgInt, y: StgInt -> StgInt(if (x.x > y.x) 1L else 0L) },
+  "<#" to wrap2 { x: StgInt, y: StgInt -> StgInt(if (x.x < y.x) 1L else 0L) },
   ">=#" to wrap2 { x: StgInt, y: StgInt -> StgInt(if (x.x >= y.x) 1L else 0L) },
   "==#" to wrap2 { x: StgInt, y: StgInt -> StgInt(if (x.x == y.x) 1L else 0L) },
 
@@ -114,6 +115,7 @@ val primOps: Map<String, () -> StgPrimOp> = mapOf(
 
   "leWord#" to wrap2 { x: StgWord, y: StgWord -> StgInt(if (x.x < y.x) 1L else 0L) },
   "eqWord#" to wrap2 { x: StgWord, y: StgWord -> StgInt(if (x.x == y.x) 1L else 0L) },
+  "minusWord#" to wrap2 { x: StgWord, y: StgWord -> StgWord(x.x - y.x) },
 
   "eqChar#" to wrap2 { x: StgChar, y: StgChar -> StgInt(if (x.x == y.x) 1L else 0L) },
 

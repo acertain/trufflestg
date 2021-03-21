@@ -1,8 +1,10 @@
 package cadenza.stg
 
 
+import cadenza.stg_types.Stg
 import com.oracle.truffle.api.CompilerDirectives
 import com.oracle.truffle.api.nodes.ExplodeLoop
+import java.math.BigDecimal
 import java.math.BigInteger
 import java.nio.ByteBuffer
 import java.util.*
@@ -142,6 +144,8 @@ val longCls = Long::class
 val intCls = Int::class
 val byteArrayCls = ByteArray::class
 val bigIntegerCls = BigInteger::class
+// FIXME: haskell's serializing as Rationals, but this is just extended-precision floats
+val rationalCls = Stg.Rational::class
 val pairCls = Pair::class
 val tripleCls = Triple::class
 val optionalCls = Optional::class
@@ -158,6 +162,7 @@ fun deserializeCborInner(k: KType, x: Cbor): Any {
     cls == intCls -> x.long.toInt()
     cls == byteArrayCls -> x.bytearray
     cls == bigIntegerCls -> if (x.x is Long) BigInteger.valueOf(x.x) else TODO()
+    cls == rationalCls -> Stg.Rational(x[0].long, x[1].long)
     cls.java.isArray -> {
       val cls2 = clsifierMap[args[0]!!]
       val arr1 = x.array.map { deserializeCbor(args[0]!!, it) }.toTypedArray()

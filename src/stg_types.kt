@@ -172,8 +172,8 @@ class Stg {
     class DataLabel : LabelSpec()
   }
 
-  // TODO
-  class Rational
+//  data class Rational(val x: Long, val y: Long)
+  data class Rational(val x: Long, val y: Long)
 
   sealed class Lit {
     data class LitChar(val x: String) : Lit()

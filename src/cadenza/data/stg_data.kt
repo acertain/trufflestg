@@ -96,6 +96,8 @@ class StgAddr(
 ) {
   operator fun get(ix: Int): Byte = arr[offset + ix]
   operator fun set(ix: StgInt, y: Byte) { arr[offset + ix.x.toInt()] = y }
+
+  fun asArray(): ByteArray = arr.copyOfRange(offset, arr.size)
 }
 
 // afaict this guy can be mutable (& freeze & unfreeze operate on it)?

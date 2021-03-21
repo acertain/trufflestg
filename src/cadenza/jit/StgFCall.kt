@@ -37,6 +37,8 @@ class StgFCall(
   }
 }
 
+fun ByteArray.asCString(): String = String(copyOfRange(0, indexOf(0x00)))
+
 var md5: MessageDigest? = null
 
 val primFCalls: Map<String, () -> StgPrimOp> = mapOf(
@@ -54,6 +56,12 @@ val primFCalls: Map<String, () -> StgPrimOp> = mapOf(
   "__hsbase_MD5Final" to wrap3 { out: StgAddr, _: StgAddr, v: VoidInh ->
     out.arr.write(out.offset, md5!!.digest())
     md5 = null
+    v
+  },
+
+  "errorBelch2" to wrap3 { x: StgAddr, y: StgAddr, v: VoidInh ->
+    // TODO: this is supposed to be printf
+    System.err.println("errorBelch2: ${x.asArray().asCString()} ${y.asArray().asCString()}")
     v
   },
 
@@ -84,11 +92,15 @@ val primFCalls: Map<String, () -> StgPrimOp> = mapOf(
   },
   "getProgArgv" to wrap3 { argc: StgAddr, argv: StgAddr, v: VoidInh ->
     // TODO: put argc & argv into new arrays, make **argc = get_argc(), i think??
-    argc.arr.write(0, 1.toByteArray())
+    argc.arr.write(0, 2.toByteArray())
 
     val ix = globalHeap.size.toLong().toByteArray()
-    globalHeap += ("2".toByteArray() + zeroBytes)
+    // FIXME this breaks something (/something is broken that this reveals)
+//    globalHeap += ("fakeprogramname".toByteArray() + 0x00)
+    globalHeap += ("2".toByteArray() + 0x00)
+    globalHeap += ("2".toByteArray() + 0x00)
 
+    // TODO: need to write one ptr per arg
     val argvIx = globalHeap.size.toLong().toByteArray()
     globalHeap += ix
 
