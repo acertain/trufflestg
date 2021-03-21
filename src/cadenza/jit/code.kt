@@ -15,6 +15,7 @@ import com.oracle.truffle.api.instrumentation.*
 import com.oracle.truffle.api.nodes.*
 import com.oracle.truffle.api.profiles.BranchProfile
 import com.oracle.truffle.api.source.SourceSection
+import cadenza.array_utils.map
 
 // utility
 @Suppress("NOTHING_TO_INLINE")

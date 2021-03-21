@@ -9,6 +9,7 @@ import com.oracle.truffle.api.frame.FrameDescriptor
 import com.oracle.truffle.api.frame.FrameSlot
 import com.oracle.truffle.api.source.Source
 import com.oracle.truffle.api.source.SourceSection
+import cadenza.array_utils.map
 
 data class CompileInfo(
   val module: Module,

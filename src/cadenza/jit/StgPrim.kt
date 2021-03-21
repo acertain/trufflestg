@@ -3,25 +3,13 @@ package cadenza.jit
 
 import cadenza.data.*
 import cadenza.panic
-import cadenza.stg_types.Stg
 import cadenza.todo
-import com.oracle.truffle.api.CompilerDirectives
-import com.oracle.truffle.api.dsl.Specialization
 import com.oracle.truffle.api.dsl.TypeSystemReference
 import com.oracle.truffle.api.frame.VirtualFrame
 import com.oracle.truffle.api.nodes.ExplodeLoop
 import com.oracle.truffle.api.nodes.Node
-import java.lang.invoke.MethodHandle
-import java.lang.invoke.MethodHandles
-import java.lang.ref.WeakReference
-import java.lang.reflect.Method
+import cadenza.array_utils.map
 import java.nio.ByteBuffer
-import kotlin.reflect.KCallable
-import kotlin.reflect.KFunction
-import kotlin.reflect.full.declaredFunctions
-import kotlin.reflect.full.functions
-import kotlin.reflect.jvm.javaMethod
-import kotlin.reflect.jvm.reflect
 
 
 class StgPrim(

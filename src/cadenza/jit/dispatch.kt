@@ -1,5 +1,6 @@
 package cadenza.jit
 
+import cadenza.array_utils.appendLSkip
 import cadenza.data.*
 import cadenza.frame.DataFrame
 import cadenza.panic

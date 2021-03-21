@@ -2,7 +2,6 @@ package cadenza.frame
 
 // cadenza.aot?
 
-import cadenza.data.map
 import cadenza.jit.Code
 import cadenza.todo
 import com.oracle.truffle.api.dsl.Cached
@@ -13,6 +12,7 @@ import com.oracle.truffle.api.nodes.ExplodeLoop
 import com.oracle.truffle.api.nodes.Node
 import com.oracle.truffle.api.nodes.NodeCost
 import com.oracle.truffle.api.nodes.NodeInfo
+import cadenza.array_utils.map
 import org.intelligence.asm.*
 import org.objectweb.asm.Type
 import org.objectweb.asm.tree.AnnotationNode

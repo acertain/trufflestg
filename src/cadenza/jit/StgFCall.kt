@@ -3,30 +3,14 @@ package cadenza.jit
 import cadenza.data.*
 import cadenza.panic
 import cadenza.stg_types.Stg
-import com.oracle.truffle.api.dsl.TypeSystemReference
 import com.oracle.truffle.api.frame.VirtualFrame
-import com.oracle.truffle.api.nodes.Node
-import java.lang.invoke.MethodHandle
-import java.lang.invoke.MethodHandles
-import java.nio.ByteBuffer
+import cadenza.array_utils.*
 import java.security.MessageDigest
-import kotlin.reflect.full.declaredFunctions
-import kotlin.reflect.jvm.javaMethod
 
 object GlobalStore {
   var GHCConcSignalSignalHandlerStore: Any? = null
 }
 
-@OptIn(ExperimentalUnsignedTypes::class)
-fun UInt.toByteArray(): ByteArray = toInt().toByteArray()
-fun Long.toByteArray(): ByteArray = ByteBuffer.allocate(8).putLong(this).array()
-fun Int.toByteArray(): ByteArray = ByteBuffer.allocate(4).putInt(this).array()
-
-fun ByteArray.write(offset: Int, x: ByteArray) { System.arraycopy(x, 0, this, offset, x.size) }
-fun ByteArray.write(offset: Int, x: Long) { write(offset,x.toByteArray()) }
-fun ByteArray.write(offset: Int, x: Int) { write(offset,x.toByteArray()) }
-@OptIn(ExperimentalUnsignedTypes::class)
-fun ByteArray.write(offset: Int, x: UInt) { write(offset,x.toByteArray()) }
 
 val zeroBytes: ByteArray = byteArrayOf(0, 0, 0, 0, 0, 0, 0, 0)
 
