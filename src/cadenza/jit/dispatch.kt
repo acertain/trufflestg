@@ -91,12 +91,9 @@ abstract class DispatchClosure(@JvmField val argsSize: Int, val tail_call: Boole
                  @Cached("fn.callTarget") cachedCallTarget: RootCallTarget,
                  // determined by fn.callTarget & fn.arity
                  @Cached("fn.papArgs.length") papSize: Int,
-                 // determined by fn.callTarget
-                 @Cached("fn.env != null") hasEnv: Boolean,
                  @Cached("create(cachedCallTarget)") callerNode: DirectCallerNode
                  ): Any? {
-    val args = appendLSkip(if (hasEnv) 2 else 1, fn.papArgs, papSize, ys, argsSize)
-    if (hasEnv) { args[1] = (fn.env ?: panic("")) }
+    val args = appendLSkip(1, fn.papArgs, papSize, ys, argsSize)
     // TODO: figure out how to avoid TailCallException if inlining
     return callerNode.call(frame, args, tail_call)
   }
@@ -112,12 +109,9 @@ abstract class DispatchClosure(@JvmField val argsSize: Int, val tail_call: Boole
                             @Cached("fn.callTarget") cachedCallTarget: RootCallTarget,
                             // determined by fn.callTarget & fn.arity
                             @Cached("fn.papArgs.length") papSize: Int,
-                            // determined by fn.callTarget
-                            @Cached("fn.env != null") hasEnv: Boolean,
                             @Cached("create(cachedCallTarget)") callerNode: DirectCallerNode,
                             @Cached("createMinusTail(argsSize, arity)") dispatch: DispatchClosure): Any? {
-    val args = appendLSkip(if (hasEnv) 2 else 1, fn.papArgs, papSize, ys, arity)
-    if (hasEnv) { args[1] = fn.env as MaterializedFrame }
+    val args = appendLSkip(1, fn.papArgs, papSize, ys, arity)
     val y = callerNode.call(frame, args, false)
     val zs = ys.copyOfRange(arity, argsSize)
     return dispatch.execute(frame, y as Closure, zs)
@@ -135,9 +129,7 @@ abstract class DispatchClosure(@JvmField val argsSize: Int, val tail_call: Boole
   @Specialization(guards = ["fn.arity == argsSize"], replaces = ["callDirect"])
   fun callIndirect(frame: VirtualFrame, fn: Closure, ys: Array<Any>,
                    @Cached("create()") callerNode: IndirectCallerNode): Any? {
-    val hasEnv = fn.env != null
-    val args = appendLSkip(if (hasEnv) 2 else 1, fn.papArgs, fn.papArgs.size, ys, argsSize)
-    if (hasEnv) { args[1] = fn.env as MaterializedFrame }
+    val args = appendLSkip(1, fn.papArgs, fn.papArgs.size, ys, argsSize)
     return callerNode.call(frame, fn.callTarget, args, tail_call)
   }
 
@@ -151,9 +143,7 @@ abstract class DispatchClosure(@JvmField val argsSize: Int, val tail_call: Boole
                               @Cached("createMinusTail(argsSize, arity)") dispatch: DispatchClosure): Any? {
     val xs = ys.copyOf(fn.arity) as Array<Any>
     val zs = ys.copyOfRange(fn.arity, ys.size)
-    val hasEnv = fn.env != null
-    val args = appendLSkip(if (hasEnv) 2 else 1, fn.papArgs, fn.papArgs.size, xs, arity)
-    if (hasEnv) { args[1] = fn.env as MaterializedFrame }
+    val args = appendLSkip(1, fn.papArgs, fn.papArgs.size, xs, arity)
     val y = callerNode.call(frame, fn.callTarget, args, false)
     return dispatch.execute(frame, y as Closure, zs)
   }

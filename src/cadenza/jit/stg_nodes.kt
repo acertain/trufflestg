@@ -163,7 +163,6 @@ fun Stg.Rhs.StgRhsClosure.compileC(bi: Stg.SBinder, ci: CompileInfo, fd: FrameDe
       ClosureRootNode(
         ci.module.language,
         bodyFd,
-        bnds.size,
         bnds,
         envPreamble.toTypedArray(),
         argPreamble.toTypedArray(),

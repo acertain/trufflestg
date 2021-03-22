@@ -85,7 +85,6 @@ open class ClosureBody constructor(
 open class ClosureRootNode(
   private val language: Language,
   frameDescriptor: FrameDescriptor = FrameDescriptor(),
-  val arity: Int,
   val argBinders: Array<Stg.SBinder>,
   // slot = closure.env[ix]
   @CompilerDirectives.CompilationFinal(dimensions = 1) val envPreamble: Array<Pair<FrameSlot, FrameSlot>>,
@@ -97,6 +96,8 @@ open class ClosureRootNode(
   val srcSection: SourceSection?,
   val updFlag: Stg.UpdateFlag,
 ) : CadenzaRootNode(language, frameDescriptor) {
+  val arity = if (isSuperCombinator()) argPreamble.size + 1 else argPreamble.size
+
   val bloomFilterSlot: FrameSlot = frameDescriptor.findOrAddFrameSlot("<TCO Bloom Filter>")
   @field:Child var selfTailCallLoopNode = SelfTailCallLoop(body, this)
   private val tailCallProfile: BranchProfile = BranchProfile.create()

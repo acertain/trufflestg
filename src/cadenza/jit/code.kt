@@ -288,27 +288,27 @@ abstract class Rhs : Node() {
     @Child var builder: BuildFrame = BuildFrameNodeGen.create()
 
     // do we need to capture an environment?
-    private inline fun isSuperCombinator() = !captures.isEmpty()
+    private inline fun isSuperCombinator() = captures.isNotEmpty()
 
     // TODO: statically allocate the Closure when possible (when no env)
     // split between capturing Lam and not?
     // might help escape analysis w/ App
     override fun execute(frame: VirtualFrame): Any = when {
-      updFlag == Stg.UpdateFlag.Updatable && arity == 0 -> Thunk(Closure(captureEnv(frame), arrayOf(), arity, callTarget), null)
-      updFlag == Stg.UpdateFlag.ReEntrant -> Closure(captureEnv(frame), arrayOf(), arity, callTarget)
+      updFlag == Stg.UpdateFlag.Updatable && arity == 0 -> Thunk(Closure(captureEnv(frame), arity, callTarget), null)
+      updFlag == Stg.UpdateFlag.ReEntrant -> Closure(captureEnv(frame), arity, callTarget)
       // TODO: ghc says SingleEntry = don't need to blackhole or update http://hackage.haskell.org/package/ghc-8.10.2/docs/src/StgSyn.html#UpdateFlag
       // TODO: is this right?
-      updFlag == Stg.UpdateFlag.SingleEntry && arity == 0 -> Closure(captureEnv(frame), arrayOf(), arity, callTarget)
+      updFlag == Stg.UpdateFlag.SingleEntry && arity == 0 -> Closure(captureEnv(frame), arity, callTarget)
       else -> panic("todo")
     }   //Closure(captureEnv(frame), arrayOf(), arity, callTarget)
 //    override fun executeClosure(frame: VirtualFrame): Closure = Closure(captureEnv(frame), arrayOf(), arity, callTarget)
 
     @ExplodeLoop
-    private fun captureEnv(frame: VirtualFrame): MaterializedFrame? {
-      if (!isSuperCombinator()) return null
+    private fun captureEnv(frame: VirtualFrame): Array<Any> {
+      if (!isSuperCombinator()) return emptyEnv
       val newFrame = Truffle.getRuntime().createVirtualFrame(noArguments, closureFd)
       captures.forEach { newFrame.setObject(it.first, frame.getObject(it.second)) }
-      return newFrame.materialize()
+      return arrayOf(newFrame.materialize())
     }
   }
 

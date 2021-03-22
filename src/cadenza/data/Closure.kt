@@ -56,14 +56,12 @@ class Thunk(
   }
 }
 
+// a statically allocated empty array for closures without args
+val emptyEnv: Array<Any> = arrayOf()
 
-// TODO: consider storing env in papArgs, to make indirect calls faster
-// (don't need to branch on env + pap, just pap)
-// & store flag if it has an env & read it from papArgs?
 @CompilerDirectives.ValueType
 // TODO: i'm using Closure when arity == 0 sometimes, make sure it works
 class Closure (
-  @JvmField val env: MaterializedFrame? = null,
   @JvmField @CompilerDirectives.CompilationFinal(dimensions = 1) val papArgs: Array<Any>,
   // left
   @JvmField val arity: Int,
@@ -74,7 +72,6 @@ class Closure (
 
   init {
     assert(arity >= 0)
-    assert(env != null == (callTarget.rootNode as ClosureRootNode).isSuperCombinator()) { "calling convention mismatch" }
     assert(arity + papArgs.size == (callTarget.rootNode as ClosureRootNode).arity)
   }
 
@@ -83,15 +80,13 @@ class Closure (
       (other is Closure) &&
       (callTarget == other.callTarget) &&
       (arity == other.arity) &&
-      (papArgs.contentEquals(other.papArgs)) &&
-      (env == other.env)
+      (papArgs.contentEquals(other.papArgs))
     )
   }
 
   fun call(): Any {
     if (arity != 0) { throw Exception("Closure.call: bad arity") }
-    val args = if (env != null) arrayOf(0L, env, *papArgs) else arrayOf(0L, *papArgs)
-    return CallUtils.callTarget(callTarget, args)
+    return CallUtils.callTarget(callTarget, arrayOf(0L, *papArgs))
   }
 
   fun call(args: Array<Any>): Any = when {
@@ -139,7 +134,7 @@ class Closure (
   // construct a partial application node, which should check that it is a PAP itself
   @CompilerDirectives.TruffleBoundary
   fun pap(@Suppress("UNUSED_PARAMETER") arguments: Array<out Any>): Closure {
-    return Closure(env, append(papArgs, arguments), arity - arguments.size, callTarget)
+    return Closure(append(papArgs, arguments), arity - arguments.size, callTarget)
   }
 }
 
