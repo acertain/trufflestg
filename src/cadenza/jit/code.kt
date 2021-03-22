@@ -48,7 +48,7 @@ abstract class Code(val loc: Loc?) : Node(), InstrumentableNode {
     @field:Child private var callWhnf: CallWhnf = CallWhnf(rands.size, tail_call)
 
     @ExplodeLoop
-    private fun executeRands(frame: VirtualFrame): Array<Any?> = rands.map { it.execute(frame) }.toTypedArray()
+    private fun executeRands(frame: VirtualFrame): Array<Any> = rands.map { it.execute(frame) }.toTypedArray()
 
     // TODO: make sure this is in whnf (assert?)
     override fun execute(frame: VirtualFrame): Any = callWhnf.execute(frame, rator.execute(frame), executeRands(frame))

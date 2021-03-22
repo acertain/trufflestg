@@ -3,6 +3,7 @@ package cadenza.jit
 import cadenza.Language
 import cadenza.Loc
 import cadenza.data.DataTypes
+import cadenza.panic
 import cadenza.section
 import cadenza.stg_types.Stg
 import com.oracle.truffle.api.CompilerDirectives
@@ -104,11 +105,11 @@ open class ClosureRootNode(
   inline fun isSuperCombinator() = envPreamble.isNotEmpty()
 
   @ExplodeLoop
-  fun buildFrame(arguments: Array<Any?>, local: VirtualFrame) {
+  fun buildFrame(arguments: Array<Any>, local: VirtualFrame) {
     val offset = if (isSuperCombinator()) 2 else 1
     for ((slot, x) in argPreamble) local.setObject(slot, arguments[x+offset])
     if (isSuperCombinator()) { // supercombinator, given environment
-      val env = arguments[1] as MaterializedFrame
+      val env = arguments[1] as? MaterializedFrame ?: panic("")
       // TODO: cache based on env type that does right read + write sequences?
       for ((slot, slot2) in envPreamble) local.setObject(slot, env.getObject(slot2))
     }
@@ -118,7 +119,7 @@ open class ClosureRootNode(
   private fun preamble(frame: VirtualFrame): VirtualFrame {
     val local = Truffle.getRuntime().createVirtualFrame(noArguments, frameDescriptor)
     local.setLong(bloomFilterSlot, (frame.arguments[0] as Long) or mask)
-    buildFrame(frame.arguments, local)
+    buildFrame(frame.arguments as Array<Any>, local)
     return local
   }
 

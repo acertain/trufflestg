@@ -16,14 +16,14 @@ import java.lang.reflect.Method
 // * less messy not using rootNode's fd
 
 
-class TailCallException(val fn: RootCallTarget, @CompilerDirectives.CompilationFinal(dimensions = 1) val args: Array<Any?>) : ControlFlowException() {}
+class TailCallException(val fn: RootCallTarget, @CompilerDirectives.CompilationFinal(dimensions = 1) val args: Array<Any>) : ControlFlowException() {}
 
 class TailCheck : Node() {
   @CompilerDirectives.CompilationFinal var root: Node? = null
   private val tailCallProfile: BranchProfile = BranchProfile.create()
   private val unrollProfile: BranchProfile = BranchProfile.create()
 
-  fun tailCheck(frame: VirtualFrame, fn: RootCallTarget, args: Array<Any?>) {
+  fun tailCheck(frame: VirtualFrame, fn: RootCallTarget, args: Array<Any>) {
     if (root == null) {
       CompilerDirectives.transferToInterpreterAndInvalidate()
       root = rootNode
@@ -56,7 +56,7 @@ class DirectCallerNode(val callTarget: RootCallTarget) : Node() {
   private val normalCallProfile = BranchProfile.create()
   private val tailCallProfile = BranchProfile.create()
 
-  fun call(frame: VirtualFrame, args: Array<Any?>, tail_call: Boolean): Any? {
+  fun call(frame: VirtualFrame, args: Array<Any>, tail_call: Boolean): Any? {
     return if (tail_call) {
       tailCheck.tailCheck(frame, callTarget, args)
       CallUtils.callDirect(callNode, args)
@@ -88,7 +88,7 @@ class IndirectCallerNode() : Node() {
   private val normalCallProfile = BranchProfile.create()
   private val tailCallProfile = BranchProfile.create()
 
-  fun call(frame: VirtualFrame, callTarget: RootCallTarget, args: Array<Any?>, tail_call: Boolean): Any? {
+  fun call(frame: VirtualFrame, callTarget: RootCallTarget, args: Array<Any>, tail_call: Boolean): Any? {
     return if (tail_call) {
       tailCheck.tailCheck(frame, callTarget, args)
       CallUtils.callIndirect(callNode, callTarget, args)
@@ -141,7 +141,7 @@ class TailCallRepeatingNode(val descriptor: FrameDescriptor) : Node(), Repeating
   fun setNextCall(
     frame: VirtualFrame,
     fn: CallTarget,
-    arguments: Array<Any?>) {
+    arguments: Array<Any>) {
     frame.setObject(functionSlot, fn)
     frame.setObject(argsSlot, arguments)
   }
@@ -156,8 +156,8 @@ class TailCallRepeatingNode(val descriptor: FrameDescriptor) : Node(), Repeating
     return result
   }
 
-  private fun getNextArgs(frame: VirtualFrame): Array<Any?> {
-    val result = FrameUtil.getObjectSafe(frame, argsSlot) as Array<Any?>
+  private fun getNextArgs(frame: VirtualFrame): Array<Any> {
+    val result = FrameUtil.getObjectSafe(frame, argsSlot) as Array<Any>
     frame.setObject(argsSlot, null)
     return result
   }

@@ -40,6 +40,7 @@ fun Stg.Lit.compile(): Any = when (this) {
   is Stg.Lit.LitNullAddr -> NullAddr
   is Stg.Lit.LitNumber -> when (x) {
     Stg.LitNumType.LitNumInt -> StgInt(y.toLong())
+    Stg.LitNumType.LitNumInt -> StgInt(y.toLong())
     Stg.LitNumType.LitNumInt64 -> TODO()
     Stg.LitNumType.LitNumWord -> StgWord(y.toLong().toULong())
     Stg.LitNumType.LitNumWord64 -> TODO()
@@ -125,10 +126,10 @@ fun Stg.Rhs.compile(bi: Stg.SBinder, ci: CompileInfo, fd: FrameDescriptor): Rhs 
 }
 
 fun Stg.SrcSpan.build(): SourceSection? = when (this) {
-  is Stg.SrcSpan.ARealSrcSpan ->
-    Source.newBuilder("cadenza", "", sp.file)
-          .content(Source.CONTENT_NONE).build()
-          .createSection(sp.sline, sp.scol, sp.eline, sp.ecol)
+  is Stg.SrcSpan.ARealSrcSpan -> null
+//    Source.newBuilder("cadenza", "", sp.file)
+//          .content(Source.CONTENT_NONE).build()
+//          .createSection(sp.sline, sp.scol, sp.eline, sp.ecol)
   is Stg.SrcSpan.UnhelpfulSpan -> null
 }
 

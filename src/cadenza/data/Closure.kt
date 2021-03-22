@@ -64,7 +64,7 @@ class Thunk(
 // TODO: i'm using Closure when arity == 0 sometimes, make sure it works
 class Closure (
   @JvmField val env: MaterializedFrame? = null,
-  @JvmField @CompilerDirectives.CompilationFinal(dimensions = 1) val papArgs: Array<Any?>,
+  @JvmField @CompilerDirectives.CompilationFinal(dimensions = 1) val papArgs: Array<Any>,
   // left
   @JvmField val arity: Int,
   @JvmField val callTarget: RootCallTarget
@@ -94,7 +94,7 @@ class Closure (
     return CallUtils.callTarget(callTarget, args)
   }
 
-  fun call(args: Array<Any?>): Any = when {
+  fun call(args: Array<Any>): Any = when {
     args.size < arity -> pap(args)
     args.size == arity -> pap(args).call()
     else -> (call(take(arity, args)) as Closure).call(drop(arity, args))
@@ -138,7 +138,7 @@ class Closure (
 
   // construct a partial application node, which should check that it is a PAP itself
   @CompilerDirectives.TruffleBoundary
-  fun pap(@Suppress("UNUSED_PARAMETER") arguments: Array<out Any?>): Closure {
+  fun pap(@Suppress("UNUSED_PARAMETER") arguments: Array<out Any>): Closure {
     return Closure(env, append(papArgs, arguments), arity - arguments.size, callTarget)
   }
 }

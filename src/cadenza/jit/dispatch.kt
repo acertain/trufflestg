@@ -20,7 +20,7 @@ import com.oracle.truffle.api.profiles.BranchProfile
 // just an inline cache of DirectCallNodes & IndirectCallNodes
 @ReportPolymorphism
 abstract class DispatchCallTarget : Node() {
-  abstract fun executeDispatch(callTarget: CallTarget, ys: Array<Any?>): Any
+  abstract fun executeDispatch(callTarget: CallTarget, ys: Array<Any>): Any
 
   @Specialization(guards = [
     "callTarget == cachedCallTarget"
@@ -47,7 +47,7 @@ class CallWhnf(@JvmField val argsSize: Int, val tail_call: Boolean): Node() {
   private val thunkProfileEval: BranchProfile = BranchProfile.create()
   private val thunkProfileGet: BranchProfile = BranchProfile.create()
 
-  fun execute(frame: VirtualFrame, fn: Any, ys: Array<Any?>): Any {
+  fun execute(frame: VirtualFrame, fn: Any, ys: Array<Any>): Any {
     if (ys.size != argsSize) { panic("CallWhnf: bad ys") }
     val f = if (fn is Thunk) {
       thunkProfile.enter()
@@ -80,14 +80,14 @@ class CallWhnf(@JvmField val argsSize: Int, val tail_call: Boolean): Node() {
 // TODO: dispatch by arity first?
 abstract class DispatchClosure(@JvmField val argsSize: Int, val tail_call: Boolean) : Node() {
   // pre: ys.size == argsSize
-  abstract fun execute(frame: VirtualFrame, fn: Closure, ys: Array<Any?>): Any
+  abstract fun execute(frame: VirtualFrame, fn: Closure, ys: Array<Any>): Any
 
 
   @Specialization(guards = [
     "fn.arity == argsSize",
     "fn.callTarget == cachedCallTarget"
   ], limit = "3")
-  fun callDirect(frame: VirtualFrame, fn: Closure, ys: Array<Any?>?,
+  fun callDirect(frame: VirtualFrame, fn: Closure, ys: Array<Any>?,
                  @Cached("fn.callTarget") cachedCallTarget: RootCallTarget,
                  // determined by fn.callTarget & fn.arity
                  @Cached("fn.papArgs.length") papSize: Int,
@@ -107,7 +107,7 @@ abstract class DispatchClosure(@JvmField val argsSize: Int, val tail_call: Boole
     "fn.arity == arity",
     "fn.callTarget == cachedCallTarget"
   ], limit = "3")
-  fun callDirectOverapplied(frame: VirtualFrame, fn: Closure, ys: Array<Any?>,
+  fun callDirectOverapplied(frame: VirtualFrame, fn: Closure, ys: Array<Any>,
                             @Cached("fn.arity") arity: Int,
                             @Cached("fn.callTarget") cachedCallTarget: RootCallTarget,
                             // determined by fn.callTarget & fn.arity
@@ -124,7 +124,7 @@ abstract class DispatchClosure(@JvmField val argsSize: Int, val tail_call: Boole
   }
 
   @Specialization(guards = ["fn.arity > argsSize"])
-  fun callUnderapplied(fn: Closure, ys: Array<Any?>): Any? {
+  fun callUnderapplied(fn: Closure, ys: Array<Any>): Any? {
     return fn.pap(ys)
   }
 
@@ -133,7 +133,7 @@ abstract class DispatchClosure(@JvmField val argsSize: Int, val tail_call: Boole
   // replaces => give up on callDirect once more than 3 variants
   // TODO: is replaces the right choice?
   @Specialization(guards = ["fn.arity == argsSize"], replaces = ["callDirect"])
-  fun callIndirect(frame: VirtualFrame, fn: Closure, ys: Array<Any?>?,
+  fun callIndirect(frame: VirtualFrame, fn: Closure, ys: Array<Any>,
                    @Cached("create()") callerNode: IndirectCallerNode): Any? {
     val hasEnv = fn.env != null
     val args = appendLSkip(if (hasEnv) 2 else 1, fn.papArgs, fn.papArgs.size, ys, argsSize)
@@ -145,11 +145,11 @@ abstract class DispatchClosure(@JvmField val argsSize: Int, val tail_call: Boole
     "fn.arity < argsSize",
     "arity == fn.arity"
   ], replaces = ["callDirectOverapplied"])
-  fun callIndirectOverapplied(frame: VirtualFrame, fn: Closure, ys: Array<Any?>,
+  fun callIndirectOverapplied(frame: VirtualFrame, fn: Closure, ys: Array<Any>,
                               @Cached("fn.arity") arity: Int,
                               @Cached("create()") callerNode: IndirectCallerNode,
                               @Cached("createMinusTail(argsSize, arity)") dispatch: DispatchClosure): Any? {
-    val xs = ys.copyOf(fn.arity)
+    val xs = ys.copyOf(fn.arity) as Array<Any>
     val zs = ys.copyOfRange(fn.arity, ys.size)
     val hasEnv = fn.env != null
     val args = appendLSkip(if (hasEnv) 2 else 1, fn.papArgs, fn.papArgs.size, xs, arity)

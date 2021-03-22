@@ -67,6 +67,9 @@ tasks.withType<KotlinCompile> {
   kotlinOptions {
     jvmTarget = JavaVersion.VERSION_1_8.toString()
     freeCompilerArgs += "-Xno-param-assertions"
+    freeCompilerArgs += "-Xno-call-assertions"
+    freeCompilerArgs += "-Xno-receiver-assertions"
+
     freeCompilerArgs += "-Xopt-in=kotlin.RequiresOptIn"
   }
 }
