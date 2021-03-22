@@ -13,6 +13,7 @@ before_install:
 
 script:
 - java -version
+- ./gradlew test
 - ./gradlew dokka distZip
 
 cache:

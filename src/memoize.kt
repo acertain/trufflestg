@@ -1,6 +1,7 @@
-package cadenza.stg
 
-import cadenza.Language
+package trufflestg
+
+import trufflestg.Language
 import com.oracle.truffle.api.CallTarget
 import com.oracle.truffle.api.CompilerDirectives
 import com.oracle.truffle.api.Truffle

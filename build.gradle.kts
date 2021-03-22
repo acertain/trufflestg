@@ -117,8 +117,8 @@ buildScan {
 
 gitPublish {
   repoUri.set(
-    if (System.getenv("CI") != null) "https://github.com/ekmett/cadenza.git"
-    else "git@github.com:ekmett/cadenza.git"
+    if (System.getenv("CI") != null) "https://github.com/acertain/trufflestg.git"
+    else "git@github.com:acertain/trufflestg.git"
   )
   branch.set("gh-pages")
   repoDir.set(file("$buildDir/javadoc"))
@@ -128,13 +128,13 @@ gitPublish {
 tasks.getByName("gitPublishCommit").dependsOn(":dokka")
 
 application {
-  mainClassName = "cadenza.Launcher"
+  mainClassName = "trufflestg.Launcher"
   applicationDefaultJvmArgs = listOf(
     "-XX:+UnlockExperimentalVMOptions",
     "-XX:+EnableJVMCI",
     "--module-path=${compiler.asPath}",
     "--upgrade-module-path=${compiler.asPath}",
-    "-Dtruffle.class.path.append=@CADENZA_APP_HOME@/lib/cadenza-${project.version}.jar"
+    "-Dtruffle.class.path.append=@TRUFFLESTG_APP_HOME@/lib/trufflestg-${project.version}.jar"
   )
 }
 
@@ -147,7 +147,7 @@ val graalArgs = listOf(
   "--upgrade-module-path=${compiler.asPath}",
 //  "-XX:-UseJVMCIClassLoader",
   "-Dgraalvm.locatorDisabled=true",
-  "-Dtruffle.class.path.append=build/libs/cadenza-${project.version}.jar",
+  "-Dtruffle.class.path.append=build/libs/trufflestg-${project.version}.jar",
   "--add-opens=jdk.internal.vm.compiler/org.graalvm.compiler.truffle.runtime=ALL-UNNAMED",
   "--add-opens=org.graalvm.truffle/com.oracle.truffle.api.source=ALL-UNNAMED",
 
@@ -189,27 +189,27 @@ tasks.getByName<Jar>("jar") {
   exclude("jre/**")
   exclude("META-INF/symlinks")
   exclude("META-INF/permissions")
-  archiveBaseName.set("cadenza")
+  archiveBaseName.set("trufflestg")
   manifest {
-    attributes["Main-Class"] = "cadenza.Launcher"
+    attributes["Main-Class"] = "trufflestg.Launcher"
     attributes["Class-Path"] = configurations.runtimeClasspath.get().files.joinToString(separator = " ") { it.absolutePath }
   }
 }
 
 
 tasks.register("componentJar", Jar::class) {
-  archiveBaseName.set("cadenza-component")
+  archiveBaseName.set("trufflestg-component")
   from(tasks.getByPath(":processResources"))
-  description = "Build the cadenza component for graal"
-  from("LICENSE.txt") { rename("LICENSE.txt","LICENSE_cadenza.txt") }
-  from("LICENSE.txt") { rename("LICENSE.txt","languages/cadenza/LICENSE.txt") }
+  description = "Build the trufflestg component for graal"
+  from("LICENSE.txt") { rename("LICENSE.txt","LICENSE_trufflestg.txt") }
+  from("LICENSE.txt") { rename("LICENSE.txt","languages/trufflestg/LICENSE.txt") }
   from(tasks.getByPath(":startScripts")) {
-    rename("(.*)","languages/cadenza/bin/$1")
-    filesMatching("**/cadenza") {
-      filter(ReplaceTokens::class, "tokens" to mapOf("CADENZA_APP_HOME" to "\$APP_HOME"))
+    rename("(.*)","languages/trufflestg/bin/$1")
+    filesMatching("**/trufflestg") {
+      filter(ReplaceTokens::class, "tokens" to mapOf("TRUFFLESTG_APP_HOME" to "\$APP_HOME"))
     }
-    filesMatching("**/cadenza.bat") {
-      filter(ReplaceTokens::class, "tokens" to mapOf("CADENZA_APP_HOME" to "%~dp0.."))
+    filesMatching("**/trufflestg.bat") {
+      filter(ReplaceTokens::class, "tokens" to mapOf("TRUFFLESTG_APP_HOME" to "%~dp0.."))
     }
   }
 
@@ -217,15 +217,15 @@ tasks.register("componentJar", Jar::class) {
     tasks.getByPath(":jar"),
     configurations.getByName("runtimeClasspath")
   )) {
-    rename("(.*).jar","languages/cadenza/lib/\$1.jar")
+    rename("(.*).jar","languages/trufflestg/lib/\$1.jar")
     exclude("graal-sdk*.jar", "truffle-api*.jar", "launcher-common*.jar") //, "annotations*.jar")
   }
 
   manifest {
-    attributes["Bundle-Name"] = "Cadenza"
-    attributes["Bundle-Description"] = "The cadenza language"
-    attributes["Bundle-DocURL"] = "https://github.com/ekmett/cadenza"
-    attributes["Bundle-Symbolic-Name"] = "cadenza"
+    attributes["Bundle-Name"] = "trufflestg"
+    attributes["Bundle-Description"] = "STG on Graal/Truffle"
+    attributes["Bundle-DocURL"] = "https://github.com/acertain/trufflestg"
+    attributes["Bundle-Symbolic-Name"] = "trufflestg"
     attributes["Bundle-Version"] = "0.0-SNAPSHOT"
     attributes["Bundle-RequireCapability"] = "org.graalvm;filter:=\"(&(graalvm_version=$graalVersion)(os_arch=amd64))\""
     attributes["x-GraalVM-Polyglot-Part"] = "True"
@@ -235,15 +235,15 @@ tasks.register("componentJar", Jar::class) {
 val componentJar = tasks.getByName<Jar>("componentJar")
 
 distributions.main {
-  baseName = "cadenza"
+  baseName = "trufflestg"
   contents {
     from(componentJar)
     exclude( "graal-sdk*.jar", "truffle-api*.jar", "launcher-common*.jar", "compiler.jar")
-    filesMatching("**/cadenza") {
-      filter(ReplaceTokens::class, "tokens" to mapOf("CADENZA_APP_HOME" to "\$APP_HOME"))
+    filesMatching("**/trufflestg") {
+      filter(ReplaceTokens::class, "tokens" to mapOf("TRUFFLESTG_APP_HOME" to "\$APP_HOME"))
     }
-    filesMatching("**/cadenza.bat") {
-      filter(ReplaceTokens::class, "tokens" to mapOf("CADENZA_APP_HOME" to "%~dp0.."))
+    filesMatching("**/trufflestg.bat") {
+      filter(ReplaceTokens::class, "tokens" to mapOf("TRUFFLESTG_APP_HOME" to "%~dp0.."))
     }
     from("LICENSE.txt")
   }
@@ -254,7 +254,7 @@ tasks.withType<ProcessResources> {
   from("etc/native-image.properties") {
     // TODO: expand more properties
     expand(project.properties)
-    rename("native-image.properties","languages/cadenza/native-image.properties")
+    rename("native-image.properties","languages/trufflestg/native-image.properties")
   }
   from(files("etc/symlinks","etc/permissions")) {
     rename("(.*)","META-INF/$1")
@@ -271,7 +271,7 @@ tasks.withType<DokkaTask> {
     arrayOf("src","test").forEach {
       sourceLink {
         path = "$it"
-        url = "https://github.com/ekmett/cadenza/blob/master/$it"
+        url = "https://github.com/acertain/trufflestg/blob/master/$it"
         lineSuffix = "#L"
       }
     }
@@ -290,19 +290,19 @@ logger.info("os = {}",os)
 // can i just tweak this one now?
 tasks.replace("run", JavaExec::class.java).run {
 //  enableAssertions = true
-  description = "Run cadenza directly from the working directory"
+  description = "Run trufflestg directly from the working directory"
   dependsOn(":jar")
   classpath = sourceSets["main"].runtimeClasspath
   jvmArgs = graalArgs
-  main = "cadenza.Launcher"
+  main = "trufflestg.Launcher"
 }
 
 // assumes we are building on graal
 tasks.register("runInstalled", Exec::class) {
   group = "application"
-  description = "Run a version of cadenza from the distribution dir"
+  description = "Run a version of trufflestg from the distribution dir"
   dependsOn(":installDist")
-  executable = "$buildDir/install/cadenza/bin/cadenza"
+  executable = "$buildDir/install/trufflestg/bin/trufflestg"
   outputs.upToDateWhen { false }
 }
 
@@ -332,31 +332,31 @@ if (graalHome != null) {
   tasks.register("register", Exec::class) {
     group = "installation"
     dependsOn(componentJar)
-    description = "Register cadenza with graal"
+    description = "Register trufflestg with graal"
     commandLine = listOf(
       "$graalBinDir/gu",
       "install",
       "-f",
       "-L",
-      "build/libs/cadenza-component-${project.version}.jar"
+      "build/libs/trufflestg-component-${project.version}.jar"
     )
   }
   // assumes we are building on graal
   tasks.register("runRegistered", Exec::class) {
     group = "application"
-    description = "Run a registered version of cadenza"
+    description = "Run a registered version of trufflestg"
     dependsOn(":register")
-    executable = "$graalBinDir/cadenza"
+    executable = "$graalBinDir/trufflestg"
     environment("JAVA_HOME", graalHome as String)
     outputs.upToDateWhen { false }
   }
   tasks.register("unregister", Exec::class) {
     group = "installation"
-    description = "Unregister cadenza with graal"
+    description = "Unregister trufflestg with graal"
     commandLine = listOf(
       "$graalBinDir/gu",
       "remove",
-      "cadenza"
+      "trufflestg"
     )
   }
 }

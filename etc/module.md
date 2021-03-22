@@ -1,4 +1,4 @@
-# Module cadenza
+# Module trufflestg
 
 This module attempts to define a functional language using truffle.
 
@@ -14,14 +14,3 @@ Parsing combinators
 
 Pretty printing combinators
 
-# Package cadenza
-
-An exploration of functional programming on truffle
-
-# Package cadenza.data
-
-These are the objects and environments that are manupulated by cadenza
-
-# Package cadenza.jit
-
-These truffle nodes allow us to JIT
