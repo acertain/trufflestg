@@ -39,6 +39,7 @@ abstract class DispatchCallTarget : Node() {
 }
 
 // optionally apply some args then make it whnf
+// TODO: report polymorphic specialize when thunkProfileGet & thunkProfileEval?
 class CallWhnf(@JvmField val argsSize: Int, val tail_call: Boolean): Node() {
   @field:Child var thunkDispatch: DispatchClosure = DispatchClosureNodeGen.create(0, false)
   @field:Child var dispatch: DispatchClosure = DispatchClosureNodeGen.create(argsSize, tail_call)

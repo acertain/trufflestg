@@ -69,7 +69,6 @@ tasks.withType<KotlinCompile> {
     freeCompilerArgs += "-Xno-param-assertions"
     freeCompilerArgs += "-Xno-call-assertions"
     freeCompilerArgs += "-Xno-receiver-assertions"
-
     freeCompilerArgs += "-Xopt-in=kotlin.RequiresOptIn"
   }
 }

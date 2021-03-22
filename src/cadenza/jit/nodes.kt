@@ -110,7 +110,7 @@ open class ClosureRootNode(
     val offset = if (isSuperCombinator()) 2 else 1
     for ((slot, x) in argPreamble) local.setObject(slot, arguments[x+offset])
     if (isSuperCombinator()) { // supercombinator, given environment
-      val env = arguments[1] as? MaterializedFrame ?: panic("")
+      val env = (arguments[1] as? MaterializedFrame)!!
       // TODO: cache based on env type that does right read + write sequences?
       for ((slot, slot2) in envPreamble) local.setObject(slot, env.getObject(slot2))
     }
@@ -119,8 +119,9 @@ open class ClosureRootNode(
   @ExplodeLoop
   private fun preamble(frame: VirtualFrame): VirtualFrame {
     val local = Truffle.getRuntime().createVirtualFrame(noArguments, frameDescriptor)
-    local.setLong(bloomFilterSlot, (frame.arguments[0] as Long) or mask)
-    buildFrame(frame.arguments as Array<Any>, local)
+    val args = (frame.arguments as? Array<Any>)!!
+    local.setLong(bloomFilterSlot, (args[0] as? Long)!! or mask)
+    buildFrame(args, local)
     return local
   }
 
