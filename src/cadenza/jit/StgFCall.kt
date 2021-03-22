@@ -32,7 +32,7 @@ class StgFCall(
     if (opNode != null) {
       return opNode!!.run(frame, xs)
     } else {
-      panic{"foreign call nyi $name"}
+      panic{"foreign call nyi $name ${xs.contentToString()}"}
     }
   }
 }
@@ -109,6 +109,51 @@ val primFCalls: Map<String, () -> StgPrimOp> = mapOf(
   },
   "u_towupper" to wrap2 { x: StgInt, w: RealWorld ->
     UnboxedTuple(arrayOf(StgInt(Character.toUpperCase(x.x.toInt()).toLong())))
+  },
+  "u_gencat" to wrap2 { x: StgInt, w: RealWorld ->
+    UnboxedTuple(arrayOf(StgInt(when (Character.getType(x.x.toInt()).toByte()) {
+      // in java's order, mapping to haskell's order
+      Character.UNASSIGNED -> 29
+      Character.UPPERCASE_LETTER -> 0
+      Character.LOWERCASE_LETTER -> 1
+      Character.TITLECASE_LETTER -> 2
+      Character.MODIFIER_LETTER -> 3
+      Character.OTHER_LETTER -> 4
+      Character.NON_SPACING_MARK -> 5
+      Character.ENCLOSING_MARK -> 7
+      Character.COMBINING_SPACING_MARK -> 6
+      Character.DECIMAL_DIGIT_NUMBER -> 8
+      Character.LETTER_NUMBER -> 9
+      Character.OTHER_NUMBER -> 10
+      Character.SPACE_SEPARATOR -> 22
+      Character.LINE_SEPARATOR -> 23
+      Character.PARAGRAPH_SEPARATOR -> 24
+      Character.CONTROL -> 25
+      Character.FORMAT -> 26
+      Character.PRIVATE_USE -> 28
+      Character.SURROGATE -> 27
+      Character.DASH_PUNCTUATION -> 12
+      Character.START_PUNCTUATION -> 13
+      Character.END_PUNCTUATION -> 14
+      Character.CONNECTOR_PUNCTUATION -> 11
+      Character.OTHER_PUNCTUATION -> 17
+      Character.MATH_SYMBOL -> 18
+      Character.CURRENCY_SYMBOL -> 19
+      Character.MODIFIER_SYMBOL -> 20
+      Character.OTHER_SYMBOL -> 21
+      Character.INITIAL_QUOTE_PUNCTUATION -> 15
+      Character.FINAL_QUOTE_PUNCTUATION -> 16
+      else -> panic("java.lang.Character.getType: unknown category")
+    }.toLong())))
+  },
+  "u_iswalpha" to wrap2 { x: StgInt, w: RealWorld ->
+    UnboxedTuple(arrayOf(StgInt(when (Character.getType(x.x.toInt()).toByte()) {
+      Character.UPPERCASE_LETTER -> 1
+      Character.LOWERCASE_LETTER -> 1
+      Character.TITLECASE_LETTER -> 1
+      Character.MODIFIER_LETTER -> 1
+      Character.OTHER_LETTER -> 1
+      else -> 0
+    }.toLong())))
   }
 )
-

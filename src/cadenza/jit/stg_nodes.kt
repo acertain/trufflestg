@@ -60,7 +60,7 @@ fun Stg.Expr.compile(ci: CompileInfo, fd: FrameDescriptor, tc: Boolean): Code = 
         is Stg.AltType.AlgAlt -> {
           val (bs, cs) = alts.map {
             Pair((ci.module.dataCons[(it.con as Stg.AltCon.AltDataCon).x]!! to map(it.binders) { x -> fd.addFrameSlot(x.binderId) }),
-              it.rhs.compile(ci, fd, true))
+              it.rhs.compile(ci, fd, tc))
           }.unzip()
           CaseAlts.AlgAlts(
             ci.module.tyCons[altTy.x]!!,
@@ -83,13 +83,13 @@ fun Stg.Expr.compile(ci: CompileInfo, fd: FrameDescriptor, tc: Boolean): Code = 
         }
         is Stg.AltType.PrimAlt -> when {
           alts.all {  it.con is Stg.AltCon.AltLit && it.binders.isEmpty() } -> {
-            val (cs, bs) = alts.map { (it.con as Stg.AltCon.AltLit).x.compile() to it.rhs.compile(ci, fd, true) }.unzip()
+            val (cs, bs) = alts.map { (it.con as Stg.AltCon.AltLit).x.compile() to it.rhs.compile(ci, fd, tc) }.unzip()
             CaseAlts.PrimAlts(cs.toTypedArray(), bs.toTypedArray())
           }
           else -> TODO("$this")
         }
       },
-      default?.rhs?.compile(ci, fd, true)
+      default?.rhs?.compile(ci, fd, tc)
     )
   }
   is Stg.Expr.StgConApp -> Code.ConApp(Rhs.ArgCon(ci.module.dataCons[x]!!, map(args) { it.compile(ci, fd) }))

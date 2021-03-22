@@ -103,6 +103,7 @@ val primOps: Map<String, () -> StgPrimOp> = mapOf(
 
   "newMutVar#" to wrap2 { x: Any, _: VoidInh -> UnboxedTuple(arrayOf(StgMutVar(x))) },
   "readMutVar#" to wrap2 { x: StgMutVar, _: VoidInh -> UnboxedTuple(arrayOf(x.x)) },
+  "writeMutVar#" to wrap3 { x: StgMutVar, y: Any, v: VoidInh -> x.x = y; v },
 
   "leChar#" to wrap2 { x: StgChar, y: StgChar -> StgInt(if (x.x <= y.x) 1L else 0L) },
   "ord#" to wrap1 { x: StgChar -> StgInt(x.x.toLong()) }, // TODO: should this be an unsigned conversion?
@@ -126,6 +127,7 @@ val primOps: Map<String, () -> StgPrimOp> = mapOf(
       return StgData(ty.cons[(x as StgInt).x.toInt()], arrayOf())
     }}
   },
+  "dataToTag#" to wrap1 { x: StgData -> val c = x.con; StgInt(c.ty.cons.indexOf(c).toLong()) },
 
   // just reads a byte
   // TODO: make sure this is right (maybe should be unsigned)?
