@@ -22,7 +22,6 @@ import cadenza.array_utils.map
 private inline fun isSuperCombinator(callTarget: RootCallTarget) =
   callTarget.rootNode.let { it is ClosureRootNode && it.isSuperCombinator() }
 
-@ReportPolymorphism
 @GenerateWrapper
 @NodeInfo(language = "core", description = "core nodes")
 @TypeSystemReference(DataTypes::class)
@@ -148,7 +147,6 @@ abstract class Code(val loc: Loc?) : Node(), InstrumentableNode {
 }
 
 @TypeSystemReference(DataTypes::class)
-@ReportPolymorphism
 abstract class CaseAlts : Node() {
   abstract fun execute(frame: VirtualFrame, x: Any?): Any?
 
@@ -189,18 +187,19 @@ abstract class CaseAlts : Node() {
 
   class AlgAlts(
     val ty: TyCon,
-    @CompilerDirectives.CompilationFinal(dimensions = 1) val cons: Array<Pair<DataCon,Array<FrameSlot>>>,
+    @CompilerDirectives.CompilationFinal(dimensions = 1) val cons: Array<DataCon>,
+    @CompilerDirectives.CompilationFinal(dimensions = 2) val slots: Array<Array<FrameSlot>>,
     @field:Children val bodies: Array<Code>
   ): CaseAlts() {
     @CompilerDirectives.CompilationFinal(dimensions = 1) val profiles: Array<BranchProfile> = Array(cons.size) { BranchProfile.create() }
 
     @ExplodeLoop
     override fun execute(frame: VirtualFrame, x: Any?): Any? {
-//      val y = whnf(x) as StgData
       if (x !is StgData) { panic("AlgAlts") }
-      cons.forEachIndexed { ix, (c, sls) ->
+      cons.forEachIndexed { ix, c ->
         if (c === x.con) {
           profiles[ix].enter()
+          val sls = slots[ix]
           if (x.args.size != sls.size) { panic("AlgAlts: con size mismatch") }
           sls.forEachIndexed { sx, s -> frame.setObject(s, x.args[sx]) }
           return bodies[ix].execute(frame)
@@ -218,7 +217,6 @@ abstract class CaseAlts : Node() {
 
 @NodeInfo(language = "arg", description = "argument of a function or data constructor")
 @TypeSystemReference(DataTypes::class)
-@ReportPolymorphism
 abstract class Arg : Node() {
   abstract fun execute(frame: VirtualFrame): Any
 
@@ -266,7 +264,6 @@ abstract class Arg : Node() {
 
 @NodeInfo(language = "rhs", description = "rhs of a let")
 @TypeSystemReference(DataTypes::class)
-@ReportPolymorphism
 // TODO: InstrumentableNode
 abstract class Rhs : Node() {
   abstract fun execute(frame: VirtualFrame): Any
@@ -278,8 +275,7 @@ abstract class Rhs : Node() {
   // TODO: or a nullary Closure if ReEntrant ?
   // a StgRhsClosure
   class RhsClosure(
-    private val closureFd: FrameDescriptor?,
-    @CompilerDirectives.CompilationFinal(dimensions = 1) val captures: Array<Pair<FrameSlot,FrameSlot>>,
+    @CompilerDirectives.CompilationFinal(dimensions = 1) val captures: Array<FrameSlot>,
     val arity: Int,
     val updFlag: Stg.UpdateFlag,
     @field:CompilerDirectives.CompilationFinal
@@ -306,9 +302,8 @@ abstract class Rhs : Node() {
     @ExplodeLoop
     private fun captureEnv(frame: VirtualFrame): Array<Any> {
       if (!isSuperCombinator()) return emptyEnv
-      val newFrame = Truffle.getRuntime().createVirtualFrame(noArguments, closureFd)
-      captures.forEach { newFrame.setObject(it.first, frame.getObject(it.second)) }
-      return arrayOf(newFrame.materialize())
+      val cs = map(captures) { frame.getValue(it) }
+      return arrayOf(builder.execute(cs))
     }
   }
 

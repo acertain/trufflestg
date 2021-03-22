@@ -13,6 +13,7 @@ import com.oracle.truffle.api.nodes.Node
 import com.oracle.truffle.api.nodes.NodeCost
 import com.oracle.truffle.api.nodes.NodeInfo
 import cadenza.array_utils.map
+import com.oracle.truffle.api.CompilerDirectives
 import org.intelligence.asm.*
 import org.objectweb.asm.Type
 import org.objectweb.asm.tree.AnnotationNode
@@ -222,10 +223,13 @@ abstract class BuildFrame : Node() {
     @Cached("getSignature(fields)", dimensions = 1) sig: Array<FieldInfo>,
     @Cached("assembleSig(sig)") cstr: MethodHandle
   ): DataFrame {
-    return cstr.invokeExact(*fields) as DataFrame
+//    return (cstr.newInstance(fields) as? DataFrame)!!
+    return (cstr.invokeExact(fields) as? DataFrame)!!
+//    return cstr.invokeExact(*fields) as DataFrame
   }
 
   fun assembleSig(sigArr: Array<FieldInfo>): MethodHandle {
+    CompilerDirectives.transferToInterpreter()
     val sig = sigArr.map { it.sig }.joinToString("")
     var klass = frameCache[sig]
     if (klass === null) {
@@ -234,6 +238,7 @@ abstract class BuildFrame : Node() {
     }
     val arrayClass = arrayOf<Any>().javaClass
     val ctor = klass.getConstructor(arrayClass)
+//    return ctor
     val ctorH = lookup.unreflectConstructor(ctor)
     return ctorH.asType(ctorH.type().changeReturnType(DataFrame::class.java))
   }

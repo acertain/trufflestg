@@ -59,14 +59,11 @@ fun Stg.Expr.compile(ci: CompileInfo, fd: FrameDescriptor, tc: Boolean): Code = 
       fd.addFrameSlot(bnd.binderId),
       when (altTy) {
         is Stg.AltType.AlgAlt -> {
-          val (bs, cs) = alts.map {
-            Pair((ci.module.dataCons[(it.con as Stg.AltCon.AltDataCon).x]!! to map(it.binders) { x -> fd.addFrameSlot(x.binderId) }),
-              it.rhs.compile(ci, fd, tc))
-          }.unzip()
           CaseAlts.AlgAlts(
             ci.module.tyCons[altTy.x]!!,
-            bs.toTypedArray(),
-            cs.toTypedArray()
+            alts.map { ci.module.dataCons[(it.con as Stg.AltCon.AltDataCon).x]!! }.toTypedArray(),
+            alts.map { map(it.binders) { x -> fd.addFrameSlot(x.binderId) } }.toTypedArray(),
+            alts.map { it.rhs.compile(ci, fd, tc) }.toTypedArray()
           )
         }
         is Stg.AltType.MultiValAlt -> when {
@@ -136,27 +133,23 @@ fun Stg.SrcSpan.build(): SourceSection? = when (this) {
 // TODO: convert Let rhs=Ap into a Pap when possible (avoid unnecessary Closure indirection)
 fun Stg.Rhs.StgRhsClosure.compileC(bi: Stg.SBinder, ci: CompileInfo, fd: FrameDescriptor): Rhs {
   val bodyFd = FrameDescriptor()
-  val closureFd = FrameDescriptor()
 
-  val captureSteps = arrayListOf<Pair<FrameSlot,FrameSlot>>()
-  val envPreamble = arrayListOf<Pair<FrameSlot,FrameSlot>>()
+  val captures = arrayListOf<FrameSlot>()
+  val envPreamble = arrayListOf<Pair<FrameSlot,Int>>()
 
-  // TODO: seems like i can't trust fvs :(
-  for (id in fvs) {
+  fvs.forEachIndexed { ix, id ->
     val slot = bodyFd.addFrameSlot(id)
-    val closureSlot = closureFd.addFrameSlot(id)
     val parentSlot = fd.findFrameSlot(id)
 
-    captureSteps += Pair(closureSlot, parentSlot)
-    envPreamble += Pair(slot, closureSlot)
+    captures += parentSlot
+    envPreamble += Pair(slot, ix)
   }
   val argPreamble = bnds.mapIndexed { ix, b -> Pair(bodyFd.addFrameSlot(b.binderId), ix) }
 
   val bodyCode = body.compile(ci, bodyFd, true)
 
   return Rhs.RhsClosure(
-    closureFd,
-    captureSteps.toTypedArray(),
+    captures.toTypedArray(),
     bnds.size,
     upd,
     Truffle.getRuntime().createCallTarget(

@@ -6,6 +6,8 @@ import com.oracle.truffle.api.CompilerDirectives
 import java.lang.ref.WeakReference
 import kotlin.reflect.KClass
 
+// JvmField should make PE faster and might help graal
+
 // everything here is temporary until i implement unboxed fields etc
 // TODO: sealed class for possible haskell values
 
@@ -68,28 +70,27 @@ data class DataCon(
 }
 
 
-// so doing this by DataConId doesn't work, we need to do it by path + con name
 // TODO: use the unboxed frame stuff or such to generate a class per con, also don't forget to intern nullary constructors
 class StgData(
-  val con: DataCon,
-  val args: Array<Any>
+  @JvmField val con: DataCon,
+  @JvmField val args: Array<Any>
 )
 
 // Int#, Word#, Char#, etc
 // note that currently ghc only has Int#, not Int32# etc, so we only need StgInt
 // FIXME ghc actually does have various Int*# variants, but they aren't used in Int32 etc? what is going on?
-data class StgInt(val x: Long) {
+data class StgInt(@JvmField val x: Long) {
   fun toInt(): Int = x.toInt()
   operator fun compareTo(y: StgInt): Int = x.compareTo(y.x)
 }
-data class StgWord(val x: ULong)
+data class StgWord(@JvmField val x: ULong)
 // TODO: should x be UInt?
-data class StgChar(val x: Int)
+data class StgChar(@JvmField val x: Int)
 
 // for us an Addr# must be an offset into an array
 class StgAddr(
-  val arr: ByteArray,
-  val offset: Int
+  @JvmField val arr: ByteArray,
+  @JvmField val offset: Int
 ) {
   operator fun get(ix: Int): Byte = arr[offset + ix]
   operator fun set(ix: StgInt, y: Byte) { arr[offset + ix.x.toInt()] = y }
@@ -99,16 +100,16 @@ class StgAddr(
 
 // afaict this guy can be mutable (& freeze & unfreeze operate on it)?
 class StgArray(
-  val arr: Array<Any>
+  @JvmField val arr: Array<Any>
 ) {
   operator fun get(ix: StgInt): Any = arr[ix.toInt()]
   operator fun set(y: StgInt, value: Any) { arr[y.toInt()] = value }
 }
 
 class StgMutableByteArray(
-  val arr: ByteArray
+  @JvmField val arr: ByteArray
 ) {
-  var frozen: Boolean = false
+  @JvmField var frozen: Boolean = false
 }
 
 //class StgByteArray(
@@ -117,12 +118,12 @@ class StgMutableByteArray(
 
 // TODO
 class StgMVar(
-  var full: Boolean,
-  var value: Any?
+  @JvmField var full: Boolean,
+  @JvmField var value: Any?
 )
 
 class StgMutVar(
-  var x: Any
+  @JvmField var x: Any
 )
 
 
@@ -134,23 +135,23 @@ class HaskellException(val x: Any): Exception()
 // FIXME: implement this, see WeakHashMap code
 // Weak#
 class WeakRef(
-  val key: Any,
-  val value: Any,
-  val finalizer: Any? = null
+  @JvmField val key: Any,
+  @JvmField val value: Any,
+  @JvmField val finalizer: Any? = null
 )
 
 // TODO: don't store these in closures & etc, only use them in functions, ensureVirtualized
 class UnboxedTuple(
-  val x: Array<Any>
+  @JvmField val x: Array<Any>
 )
 
 // ThreadId#
 class ThreadId(
-  val id: Long
+  @JvmField val id: Long
 )
 
 
 // TODO: store a weakref here
 class StablePtr(
-  var x: Any?
+  @JvmField var x: Any?
 )

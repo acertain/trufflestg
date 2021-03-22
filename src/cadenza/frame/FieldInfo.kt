@@ -30,6 +30,8 @@ sealed class FieldInfo(val sig: Char, val type: Type) {
       is Float -> floatFieldInfo
       is Long -> longFieldInfo
       is Double -> doubleFieldInfo
+      // FIXME: StgInt, StgWord
+      // TODO: think if i want to unbox any of the other types in stg_data.kt
       else -> objectFieldInfo
     }
   }

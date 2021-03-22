@@ -9,6 +9,7 @@ import java.math.BigInteger
 import java.nio.ByteBuffer
 import java.util.*
 import kotlin.reflect.*
+import kotlin.reflect.full.functions
 import kotlin.reflect.full.isSubclassOf
 import kotlin.reflect.full.primaryConstructor
 import kotlin.reflect.jvm.javaConstructor
@@ -192,9 +193,8 @@ fun deserializeCborInner(k: KType, x: Cbor): Any {
     cls.isInline() -> {
       val ctor = primaryCtorMap[cls]
       val ty = paramsTypes[ctor][0]
-//      val m = methMap[ctor]
-//      methMap[ctor].invoke(null, deserializeCbor(ty,x))!!
-      ctor.call(deserializeCbor(ty,x))!!
+      val m = cls.java.methods.find { it.name == "box-impl" }!!
+      m.invoke(null, deserializeCbor(ty,x))!!
     }
     isEnumMap[cls] -> {
       if (x.array.size != 1) { throw BadCbor(k) }

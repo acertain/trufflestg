@@ -3,6 +3,9 @@ package cadenza.jit
 import cadenza.Language
 import cadenza.Loc
 import cadenza.data.DataTypes
+import cadenza.frame.DataFrame
+import cadenza.frame.ReadFrame
+import cadenza.frame.ReadFrameNodeGen
 import cadenza.panic
 import cadenza.section
 import cadenza.stg_types.Stg
@@ -87,7 +90,7 @@ open class ClosureRootNode(
   frameDescriptor: FrameDescriptor = FrameDescriptor(),
   val argBinders: Array<Stg.SBinder>,
   // slot = closure.env[ix]
-  @CompilerDirectives.CompilationFinal(dimensions = 1) val envPreamble: Array<Pair<FrameSlot, FrameSlot>>,
+  @CompilerDirectives.CompilationFinal(dimensions = 1) val envPreamble: Array<Pair<FrameSlot, Int>>,
   @CompilerDirectives.CompilationFinal(dimensions = 1) val argPreamble: Array<Pair<FrameSlot, Int>>,
   @field:Child var body: ClosureBody,
   val module: Module,
@@ -102,6 +105,8 @@ open class ClosureRootNode(
   @field:Child var selfTailCallLoopNode = SelfTailCallLoop(body, this)
   private val tailCallProfile: BranchProfile = BranchProfile.create()
 
+  @field:Child var readFrame: ReadFrame = ReadFrameNodeGen.create(envPreamble)
+
   @Suppress("NOTHING_TO_INLINE")
   inline fun isSuperCombinator() = envPreamble.isNotEmpty()
 
@@ -110,9 +115,7 @@ open class ClosureRootNode(
     val offset = if (isSuperCombinator()) 2 else 1
     for ((slot, x) in argPreamble) local.setObject(slot, arguments[x+offset])
     if (isSuperCombinator()) { // supercombinator, given environment
-      val env = (arguments[1] as? MaterializedFrame)!!
-      // TODO: cache based on env type that does right read + write sequences?
-      for ((slot, slot2) in envPreamble) local.setObject(slot, env.getObject(slot2))
+      readFrame.execute(local, arguments[1])
     }
   }
 

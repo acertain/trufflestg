@@ -26,8 +26,8 @@ fun whnf(x: Any): Any = when(x) {
 
 // TODO: selector thunks
 class Thunk(
-  var clos: Closure?,
-  var value_: Any?
+  @JvmField var clos: Closure?,
+  @JvmField var value_: Any?
 ) {
   fun getValue(): Any {
     val v = value_

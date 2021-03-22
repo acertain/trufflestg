@@ -76,9 +76,9 @@ class CallWhnf(@JvmField val argsSize: Int, val tail_call: Boolean): Node() {
 
 // TODO: dispatch on closure equality for static (no env or pap) closures?
 // (would need to statically allocate them)
-//@ReportPolymorphism
 // TODO: param for limit of recursive occurences?
 // TODO: dispatch by arity first?
+@ReportPolymorphism
 abstract class DispatchClosure(@JvmField val argsSize: Int, val tail_call: Boolean) : Node() {
   // pre: ys.size == argsSize
   abstract fun execute(frame: VirtualFrame, fn: Closure, ys: Array<Any>): Any
