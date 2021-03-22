@@ -2,26 +2,18 @@ package cadenza.frame
 
 // cadenza.aot?
 
+import cadenza.array_utils.map
 import cadenza.jit.Code
-import cadenza.todo
+import com.oracle.truffle.api.CompilerDirectives
 import com.oracle.truffle.api.dsl.Cached
 import com.oracle.truffle.api.dsl.Specialization
 import com.oracle.truffle.api.frame.FrameSlotTypeException
-import com.oracle.truffle.api.frame.VirtualFrame
 import com.oracle.truffle.api.nodes.ExplodeLoop
 import com.oracle.truffle.api.nodes.Node
-import com.oracle.truffle.api.nodes.NodeCost
-import com.oracle.truffle.api.nodes.NodeInfo
-import cadenza.array_utils.map
-import com.oracle.truffle.api.CompilerDirectives
 import org.intelligence.asm.*
 import org.objectweb.asm.Type
 import org.objectweb.asm.tree.AnnotationNode
 import org.objectweb.asm.tree.LabelNode
-import java.lang.invoke.MethodHandle
-import java.lang.invoke.MethodHandles
-import java.lang.invoke.MethodType
-import java.lang.reflect.Constructor
 
 
 // manufacture cadenza.frame.dynamic.IIO, OIO, etc.
@@ -112,6 +104,7 @@ fun frame(signature: String) : ByteArray = `class`(public,"cadenza/frame/dynamic
       iconst_0
       istore_2
 
+      // FIXME: is this wrong? i think it needs to unbox? (only works for object as is?)
       for (i in types.indices) {
         aload_0
         aload_1
@@ -160,87 +153,84 @@ fun frame(signature: String) : ByteArray = `class`(public,"cadenza/frame/dynamic
   }
 }
 
-fun nodeInfo(
-  shortName: String = "",
-  cost: NodeCost = NodeCost.MONOMORPHIC,
-  description: String = "",
-  language: String = ""
-)= annotationNode(+NodeInfo::class, shortName, cost, description, language)
-
 val child: AnnotationNode get() = annotationNode(+Node.Child::class)
 
 val code = +Code::class
 
-fun builder(signature: String) : ByteArray = `class`(
-  public and final and `super`,"cadenza/jit/dynamic/${signature}_Builder", superName = code.internalName
-) {
-  val types = signature.map { FieldInfo.of(it) }.toTypedArray()
-  val members = types.indices.map { "_$it" }.toTypedArray()
-
-  visibleAnnotations = listOf(nodeInfo(shortName = "${signature}_Builder"))
-
-  members.forEach {
-    field(public, code,it).apply { visibleAnnotations = listOf(child) }
-  }
-
-  constructor(public,*types.map { it.type }.toTypedArray()) {
+interface DataFrameBuilder { fun build(xs: Array<Any>): DataFrame }
+fun factory(sig: String, cls: Class<DataFrame>): ByteArray = `class`(
+  public and final, "cadenza/frame/dynamic/${sig}Builder") {
+  interfaces = mutableListOf(type(DataFrameBuilder::class).internalName)
+  constructor(public) { asm {
+    aload_0
+    invokespecial(type(Object::class), void, "<init>")
+    `return`
+  }}
+  method(public and `final`, +DataFrame::class,"build", `object`.array) {
     asm {
-      members.forEachIndexed { i, member ->
-        aload_0
-        aload(i+1)
-        putfield(type,member, code)
-      }
-      `return`
+      new(Type.getType(cls))
+      dup
+      aload_1
+      invokespecial(Type.getType(cls), void, "<init>", `object`.array)
+      checkcast(+DataFrame::class)
+      areturn
     }
-  }
-  method(public and final, `object`, "execute", +VirtualFrame::class) {
-    todo
   }
 }
 
-fun ByteArray.loadClass(className: String) : Class<*> {
+
+fun ByteArray.loadClassWith(className: String, lookup: (String) -> Class<*>?) : Class<*> {
   val classBuffer = this
   return object : ClassLoader(Int::class.java.classLoader) {
-    override fun findClass(name: String): Class<*> = when {
-      name == "cadenza.frame.DataFrame" -> DataFrame::class.java
-      name == "com.oracle.truffle.api.frame.FrameSlotTypeException" -> FrameSlotTypeException::class.java
-      name == className -> defineClass(name, classBuffer, 0, classBuffer.size)
-      else -> TODO()
+    override fun findClass(name: String): Class<*>? = when (name) {
+      className -> defineClass(name, classBuffer, 0, classBuffer.size)
+      else -> lookup(name)
     }
   }.loadClass(className)
 }
 
-val frameCache: HashMap<String, Class<DataFrame>> = HashMap()
+fun ByteArray.loadClass(className: String,
+    f: ((String) -> Class<*>) = { TODO("loadClass: unknown class $it") }): Class<*> =
+  loadClassWith(className) {
+    when (it) {
+      "cadenza.frame.DataFrame" -> DataFrame::class.java
+      "cadenza.frame.DataFrameBuilder" -> DataFrameBuilder::class.java
+      "com.oracle.truffle.api.frame.FrameSlotTypeException" -> FrameSlotTypeException::class.java
+      else -> f(it)
+    }
+  }
+
+
+val builderCache: HashMap<String, DataFrameBuilder> = HashMap()
 
 abstract class BuildFrame : Node() {
-  var lookup: MethodHandles.Lookup = MethodHandles.publicLookup()
-
   abstract fun execute(fields: Array<Any>): DataFrame
 
   @Specialization(guards = ["matchesSig(fields, sig)"], limit = "1000000")
   fun build(
     fields: Array<Any>,
     @Cached("getSignature(fields)", dimensions = 1) sig: Array<FieldInfo>,
-    @Cached("assembleSig(sig)") cstr: MethodHandle
+    @Cached("assembleSig(sig)") cstr: DataFrameBuilder
   ): DataFrame {
-//    return (cstr.newInstance(fields) as? DataFrame)!!
-    return (cstr.invokeExact(fields) as? DataFrame)!!
-//    return cstr.invokeExact(*fields) as DataFrame
+    return cstr.build(fields)
   }
 
-  fun assembleSig(sigArr: Array<FieldInfo>): MethodHandle {
+  fun assembleSig(sigArr: Array<FieldInfo>): DataFrameBuilder {
     CompilerDirectives.transferToInterpreter()
     val sig = sigArr.map { it.sig }.joinToString("")
-    var klass = frameCache[sig]
-    if (klass === null) {
-      klass = frame(sig).loadClass("cadenza.frame.dynamic.$sig") as Class<DataFrame>
-      frameCache[sig] = klass
+    var builder = builderCache[sig]
+
+    if (builder === null) {
+      val klass = frame(sig).loadClass("cadenza.frame.dynamic.$sig") as Class<DataFrame>
+      val builderKlass = factory(sig, klass).loadClass("cadenza.frame.dynamic.${sig}Builder") {
+        when (it) {
+          "cadenza.frame.dynamic.$sig" -> klass
+          else -> TODO("$it")
+        }} as Class<DataFrameBuilder>
+      builder = builderKlass.constructors[0].newInstance() as DataFrameBuilder
+      builderCache[sig] = builder
     }
-    val arrayClass = arrayOf<Any>().javaClass
-    val ctor = klass.getConstructor(arrayClass)
-//    return ctor
-    val ctorH = lookup.unreflectConstructor(ctor)
-    return ctorH.asType(ctorH.type().changeReturnType(DataFrame::class.java))
+    return builder
   }
 
   @ExplodeLoop

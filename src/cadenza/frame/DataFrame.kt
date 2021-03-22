@@ -6,6 +6,7 @@ typealias Slot = Int
 
 // these are all the distinctions the JVM cares about
 // TODO: add rest of prim fields
+// TODO: make this an abstract class? casting to superclasses might be faster than casting to interfaces?
 interface DataFrame {
   abstract fun getValue(slot: Slot): Any?
 
