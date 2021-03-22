@@ -38,31 +38,47 @@ abstract class DispatchCallTarget : Node() {
   }
 }
 
+fun slowpath() = CompilerDirectives.transferToInterpreter()
+fun invalidate() = CompilerDirectives.transferToInterpreterAndInvalidate()
+
 // optionally apply some args then make it whnf
 // TODO: report polymorphic specialize when thunkProfileGet & thunkProfileEval?
 class CallWhnf(@JvmField val argsSize: Int, val tail_call: Boolean): Node() {
   @field:Child var thunkDispatch: DispatchClosure = DispatchClosureNodeGen.create(0, false)
   @field:Child var dispatch: DispatchClosure = DispatchClosureNodeGen.create(argsSize, tail_call)
 
+  @CompilerDirectives.CompilationFinal var seenThunkClosure: Boolean = false
+  @CompilerDirectives.CompilationFinal var seenThunkValue: Boolean = false
   private val thunkProfile: BranchProfile = BranchProfile.create()
-  private val thunkProfileEval: BranchProfile = BranchProfile.create()
-  private val thunkProfileGet: BranchProfile = BranchProfile.create()
 
   fun execute(frame: VirtualFrame, fn: Any, ys: Array<Any>): Any {
     if (ys.size != argsSize) { panic("CallWhnf: bad ys") }
+
+    // the code duplication is so that when we have only seen one of evaluated or non-evaluated thunk, we only need to do one read
     val f = if (fn is Thunk) {
       thunkProfile.enter()
-      // TODO: concurrency (blackholes? synchronization?)
-      val cl = fn.clos
-      if (cl == null) {
-        thunkProfileGet.enter()
-        fn.getValue()
+      // TODO: concurrency (blackholes/synchronization)
+      if (seenThunkValue) {
+        val v = fn.value_
+        if (v === null) {
+          if (!seenThunkClosure) { invalidate(); seenThunkClosure = true }
+          val c = fn.expectClosure()
+          fn.clos = null
+          val x = thunkDispatch.execute(frame, c, arrayOf())
+          fn.value_ = x
+          x
+        } else { v }
       } else {
-        thunkProfileEval.enter()
-        fn.clos = null
-        val x = thunkDispatch.execute(frame, cl, arrayOf())
-        fn.value_ = x
-        x
+        val c = fn.clos
+        if (c === null) {
+          invalidate(); seenThunkValue = true
+          fn.expectValue()
+        } else {
+          fn.clos = null
+          val x = thunkDispatch.execute(frame, c, arrayOf())
+          fn.value_ = x
+          x
+        }
       }
     } else fn
 

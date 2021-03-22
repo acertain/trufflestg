@@ -29,21 +29,28 @@ class Thunk(
   @JvmField var clos: Closure?,
   @JvmField var value_: Any?
 ) {
-  fun getValue(): Any {
+  fun expectValue(): Any {
     val v = value_
     if (v == null) {
       CompilerDirectives.transferToInterpreter()
-      if (clos != null) { panic("Thunk.getValue() but it's not evaluated") }
+      if (clos != null) { panic("Thunk.expectValue() but it's not evaluated") }
       // TODO: threading?
-      else { panic("Thunk.getValue() but evaluation already in progress (infinite loop? bad letrec?)") }
+      else { panic("Thunk.expectValue() but evaluation already in progress (infinite loop? bad letrec?)") }
     }
     return v
   }
-
-  fun evaluated(): Boolean = clos == null
+  fun expectClosure(): Closure {
+    val c = clos
+    if (c == null) {
+      CompilerDirectives.transferToInterpreter()
+      if (value_ != null) { panic("Thunk.expectClosure() but it's already evaluated") }
+      else { panic("Thunk.expectClosure() but evaluation already in progress (infinite loop? bad letrec?)") }
+    }
+    return c
+  }
 
   fun whnf(): Any {
-    val cl = clos ?: return getValue()
+    val cl = clos ?: return expectValue()
     clos = null
     var x = cl.call()
     // FIXME: this shouldn't be possible

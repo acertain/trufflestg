@@ -28,7 +28,7 @@ private fun assembleThrow(asm: Block, exceptionType: Type) = asm.run {
   athrow
 }
 
-// we should also build a fallback version for holding neutrals as a subclass?
+// TODO: add CompilerDirectives.ValueType to the generated class
 fun frame(signature: String) : ByteArray = `class`(public,"cadenza/frame/dynamic/$signature") {
   interfaces = mutableListOf(type(DataFrame::class).internalName)
   val types = signature.map { FieldInfo.of(it) }.toTypedArray()
@@ -225,7 +225,7 @@ abstract class BuildFrame : Node() {
       val builderKlass = factory(sig, klass).loadClass("cadenza.frame.dynamic.${sig}Builder") {
         when (it) {
           "cadenza.frame.dynamic.$sig" -> klass
-          else -> TODO("$it")
+          else -> TODO(it)
         }} as Class<DataFrameBuilder>
       builder = builderKlass.constructors[0].newInstance() as DataFrameBuilder
       builderCache[sig] = builder
