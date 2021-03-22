@@ -281,7 +281,7 @@ class CborModuleDir(
 // contents of magic GHC.Prim module
 val prims: Map<String,Any> = mapOf(
   "void#" to VoidInh,
-  "realWorld#" to RealWorld,
+  "realWorld#" to VoidInh,
   "coercionToken#" to VoidInh,
 //  "void#" to
 )

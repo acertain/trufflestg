@@ -1,7 +1,7 @@
 package cadenza
 
 import cadenza.data.Closure
-import cadenza.data.RealWorld
+import cadenza.data.VoidInh
 import cadenza.data.whnf
 import cadenza.jit.CborModuleDir
 import cadenza.jit.TopLevel
@@ -157,7 +157,7 @@ class Language : TruffleLanguage<Language.Context>() {
     val z = whnf(y) as Closure
 
     val q = try {
-      z.call(arrayOf(RealWorld))
+      z.call(arrayOf(VoidInh))
     } catch (e: Exception) {
       e.printStackTrace()
       throw e

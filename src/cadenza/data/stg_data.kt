@@ -9,12 +9,8 @@ import kotlin.reflect.KClass
 // everything here is temporary until i implement unboxed fields etc
 // TODO: sealed class for possible haskell values
 
-// until i implement unboxed frames & data types, i'm representing VoidRep like this
+// VoidRep
 object VoidInh
-// and unboxed tuples as arrays!
-
-// nyaa
-object RealWorld
 
 object NullAddr
 
@@ -81,6 +77,7 @@ class StgData(
 
 // Int#, Word#, Char#, etc
 // note that currently ghc only has Int#, not Int32# etc, so we only need StgInt
+// FIXME ghc actually does have various Int*# variants, but they aren't used in Int32 etc? what is going on?
 data class StgInt(val x: Long) {
   fun toInt(): Int = x.toInt()
   operator fun compareTo(y: StgInt): Int = x.compareTo(y.x)

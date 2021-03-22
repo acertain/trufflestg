@@ -44,15 +44,15 @@ val primOps: Map<String, () -> StgPrimOp> = mapOf(
   // TODO: CallWhnf
   "catch#" to wrap3 { x: Closure, y: Closure, z: VoidInh ->
     // TODO: do i need to box the return value as a unboxed tuple?
-    try { x.call(arrayOf(RealWorld)) }
+    try { x.call(arrayOf(VoidInh)) }
     // TODO: should this catch java exceptions?
-    catch (e: HaskellException) { y.call(arrayOf(e.x, RealWorld)) }
+    catch (e: HaskellException) { y.call(arrayOf(e.x, VoidInh)) }
   },
-  "maskAsyncExceptions#" to wrap2 { x: Closure, _: VoidInh -> x.call(arrayOf(RealWorld)) },
+  "maskAsyncExceptions#" to wrap2 { x: Closure, _: VoidInh -> x.call(arrayOf(VoidInh)) },
   // TODO: clean this up
   "unmaskAsyncExceptions#" to { object : StgPrimOp(2) {
     @field:Child var callWhnf = CallWhnf(1, false)
-    override fun run(frame: VirtualFrame, args: Array<Any>): Any = callWhnf.execute(frame, args[0], arrayOf(RealWorld))
+    override fun run(frame: VirtualFrame, args: Array<Any>): Any = callWhnf.execute(frame, args[0], arrayOf(VoidInh))
   }},
 
   "+#" to wrap2 { x: StgInt, y: StgInt -> StgInt(x.x + y.x) },
@@ -63,6 +63,11 @@ val primOps: Map<String, () -> StgPrimOp> = mapOf(
   "<#" to wrap2 { x: StgInt, y: StgInt -> StgInt(if (x.x < y.x) 1L else 0L) },
   ">=#" to wrap2 { x: StgInt, y: StgInt -> StgInt(if (x.x >= y.x) 1L else 0L) },
   "==#" to wrap2 { x: StgInt, y: StgInt -> StgInt(if (x.x == y.x) 1L else 0L) },
+
+  "addIntC#" to wrap2 { x: StgInt, y: StgInt ->
+    try { UnboxedTuple(arrayOf(StgInt(Math.addExact(x.x, y.x)), StgInt(0L))) }
+    catch (e: ArithmeticException) { UnboxedTuple(arrayOf(StgInt(x.x + y.x), StgInt(1L))) }
+  },
 
   "newMVar#" to wrap1 { x: VoidInh -> UnboxedTuple(arrayOf(StgMVar(false, null))) },
   "putMVar#" to wrap3 { x: StgMVar, y: Any, z: VoidInh ->

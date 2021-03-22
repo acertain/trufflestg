@@ -77,6 +77,26 @@ val primFCalls: Map<String, () -> StgPrimOp> = mapOf(
   },
   // TODO
   "isatty" to wrap2 { x: StgInt, _: VoidInh -> UnboxedTuple(arrayOf(StgInt(if (x.x in 0..2) 1L else 0L))) },
+  "fdReady" to { object : StgPrimOp(5) {
+    // FIXME: implement this, might need to use JNI
+    override fun run(frame: VirtualFrame, args: Array<Any>): Any {
+      if ((args[0] as StgInt).x == 1L) return UnboxedTuple(arrayOf(StgInt(1L)))
+      panic("todo: fdReady")
+    }
+  } },
+
+  "rtsSupportsBoundThreads" to wrap1 { _: VoidInh -> UnboxedTuple(arrayOf(StgInt(0L))) },
+
+  "ghczuwrapperZC20ZCbaseZCSystemziPosixziInternalsZCwrite" to wrap4 { x: StgInt, y: StgAddr, z: StgWord, v: VoidInh ->
+    // stdout
+    if (x.x == 1L) {
+      val s = y.asArray().copyOfRange(0, z.x.toInt())
+      print(String(s))
+      UnboxedTuple(arrayOf(StgInt(z.x.toLong())))
+    } else {
+      panic("nyi ghczuwrapperZC20ZCbaseZCSystemziPosixziInternalsZCwrite")
+    }
+  },
 
   "hs_free_stable_ptr" to wrap2 { x: StablePtr, _: VoidInh ->
     // FIXME: getting "deRefStablePtr after freeStablePtr", so i'm disabling this for now
@@ -107,10 +127,10 @@ val primFCalls: Map<String, () -> StgPrimOp> = mapOf(
     argv.arr.write(0,argvIx)
     UnboxedTuple(arrayOf())
   },
-  "u_towupper" to wrap2 { x: StgInt, w: RealWorld ->
+  "u_towupper" to wrap2 { x: StgInt, w: VoidInh ->
     UnboxedTuple(arrayOf(StgInt(Character.toUpperCase(x.x.toInt()).toLong())))
   },
-  "u_gencat" to wrap2 { x: StgInt, w: RealWorld ->
+  "u_gencat" to wrap2 { x: StgInt, w: VoidInh ->
     UnboxedTuple(arrayOf(StgInt(when (Character.getType(x.x.toInt()).toByte()) {
       // in java's order, mapping to haskell's order
       Character.UNASSIGNED -> 29
@@ -146,7 +166,7 @@ val primFCalls: Map<String, () -> StgPrimOp> = mapOf(
       else -> panic("java.lang.Character.getType: unknown category")
     }.toLong())))
   },
-  "u_iswalpha" to wrap2 { x: StgInt, w: RealWorld ->
+  "u_iswalpha" to wrap2 { x: StgInt, w: VoidInh ->
     UnboxedTuple(arrayOf(StgInt(when (Character.getType(x.x.toInt()).toByte()) {
       Character.UPPERCASE_LETTER -> 1
       Character.LOWERCASE_LETTER -> 1

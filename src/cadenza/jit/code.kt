@@ -252,6 +252,7 @@ abstract class Arg : Node() {
     // executeLong only helps if i have nodes that are easier to PE if called with them, i think
     // TODO: if i know the expected type, i can setWhatever after getObject, which should help PE & might help graal(?)
     // also could do the same in ClosureRootNode
+    // see https://github.com/oracle/graal/issues/627 & sl for what other langs do
     override fun execute(frame: VirtualFrame): Any {
       return frame.getObject(slot) ?: panic("null Local")
     }
