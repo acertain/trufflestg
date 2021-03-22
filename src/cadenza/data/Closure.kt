@@ -34,7 +34,7 @@ class Thunk(
     if (v == null) {
       CompilerDirectives.transferToInterpreter()
       if (clos != null) { panic("Thunk.getValue() but it's not evaluated") }
-      // TODO: threading
+      // TODO: threading?
       else { panic("Thunk.getValue() but evaluation already in progress (infinite loop? bad letrec?)") }
     }
     return v
@@ -43,15 +43,12 @@ class Thunk(
   fun evaluated(): Boolean = clos == null
 
   fun whnf(): Any {
-    val cl = clos
-    if (cl == null) return getValue()
+    val cl = clos ?: return getValue()
     clos = null
     var x = cl.call()
     // FIXME: this shouldn't be possible
-    if (x is Thunk) {
-      x = x.whnf()
-    }
-    value_= x
+    if (x is Thunk) { x = x.whnf() }
+    value_ = x
     return x
   }
 }

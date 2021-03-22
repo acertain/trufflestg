@@ -223,6 +223,7 @@ sealed class TopLevel(
   val name: String = binder.name
   val fullName: String = module.fullName + "." + name
   abstract fun getValue(): Any
+  override fun toString(): String = fullName
 
   class Function(
     module: Module,
