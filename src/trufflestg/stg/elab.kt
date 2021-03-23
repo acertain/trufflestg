@@ -313,7 +313,7 @@ class Module(
 //  val (tyCons, dataCons) = TODO()
 
   val tyCons: Map<Stg.TyConId, TyCon>
-  val dataCons: Map<Stg.DataConId, DataCon>
+  val dataCons: Map<Stg.DataConId, DataConInfo>
   init {
     val tyCons1: Map<Stg.TyConId, Pair<FullName, Stg.STyCon>> =
       src.tyCons

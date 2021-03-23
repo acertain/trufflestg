@@ -189,7 +189,7 @@ abstract class CaseAlts : Node() {
 
   class AlgAlts(
     val ty: TyCon,
-    @CompilerDirectives.CompilationFinal(dimensions = 1) val cons: Array<DataCon>,
+    @CompilerDirectives.CompilationFinal(dimensions = 1) val cons: Array<DataConInfo>,
     @CompilerDirectives.CompilationFinal(dimensions = 2) val slots: Array<Array<FrameSlot>>,
     @field:Children val bodies: Array<Code>
   ): CaseAlts() {
@@ -197,13 +197,14 @@ abstract class CaseAlts : Node() {
 
     @ExplodeLoop
     override fun execute(frame: VirtualFrame, x: Any?): Any? {
-      if (x !is StgData) { panic("AlgAlts") }
+      if (x !is DataCon) { panic("AlgAlts") }
       cons.forEachIndexed { ix, c ->
-        if (c === x.con) {
+        // TODO: use CompilerDirectives.isExact once it's released
+        if (c.klass.isInstance(x)) {
+          val x2 = CompilerDirectives.castExact(x, c.klass)
           profiles[ix].enter()
           val sls = slots[ix]
-          if (x.args.size != sls.size) { panic("AlgAlts: con size mismatch") }
-          sls.forEachIndexed { sx, s -> frame.setObject(s, x.args[sx]) }
+          sls.forEachIndexed { sx, s -> frame.setObject(s, x2.getValue(sx)) }
           return bodies[ix].execute(frame)
         }
       }
@@ -310,7 +311,7 @@ abstract class Rhs : Node() {
   }
 
   class ArgCon(
-    val con: DataCon,
+    val con: DataConInfo,
     @field:Children val args: Array<Arg>
   ) : Rhs() {
     @ExplodeLoop
@@ -320,7 +321,7 @@ abstract class Rhs : Node() {
           (con.name.name.startsWith("(#") || con.name.name == "Unit#")) {
         return UnboxedTuple(xs)
       }
-      return StgData(con, xs)
+      return con.build(xs)
     }
   }
 }

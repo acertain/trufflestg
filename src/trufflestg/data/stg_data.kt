@@ -29,48 +29,6 @@ data class FullName(
   override fun toString(): String = "$unitId:$module.$name"
 }
 
-// annoyingly the construction needs to be done here to tie the knot :(
-class TyCon private constructor(
-  val name: FullName,
-  src: Stg.STyCon
-) {
-  val cons: Array<DataCon> = src.dataCons.map {
-    DataCon(FullName(name.unitId, name.module, it.name), this)
-  }.toTypedArray()
-
-  override fun equals(other: Any?): Boolean = this === other
-  override fun hashCode(): Int = name.hashCode()
-
-  companion object {
-    // TODO: should the various global vars (this, fcall global mem, probably more) be stored in Context?
-    val knownTyCons: MutableMap<FullName, TyCon> = mutableMapOf()
-
-    fun parse(name: FullName, src: Stg.STyCon): TyCon {
-      val x = TyCon(name, src)
-      val y = knownTyCons[name]
-      if (y != null) {
-        // TODO: check also whatever else i put in DataCon
-        if(!x.cons.zip(y.cons).all { (a, b) -> a.name == b.name }) {
-          panic("trying to register a type with the same name but different constructors??")
-        }
-        return y
-      }
-      knownTyCons[name] = x
-      return x
-    }
-  }
-}
-
-// TODO: don't export constructor
-data class DataCon(
-  val name: FullName,
-  val ty: TyCon
-) {
-  override fun equals(other: Any?): Boolean = this === other
-  override fun hashCode(): Int = name.hashCode()
-}
-
-
 // TODO: use the unboxed frame stuff or such to generate a class per con, also don't forget to intern nullary constructors
 @CompilerDirectives.ValueType
 class StgData(

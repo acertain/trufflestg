@@ -13,6 +13,7 @@ import com.oracle.truffle.api.nodes.Node
 import org.intelligence.asm.*
 import org.objectweb.asm.Type
 import org.objectweb.asm.tree.AnnotationNode
+import org.objectweb.asm.tree.ClassNode
 import org.objectweb.asm.tree.LabelNode
 
 
@@ -28,8 +29,7 @@ private fun assembleThrow(asm: Block, exceptionType: Type) = asm.run {
   athrow
 }
 
-// TODO: add CompilerDirectives.ValueType to the generated class
-fun frame(signature: String) : ByteArray = `class`(public,"trufflestg/frame/dynamic/$signature") {
+fun ClassNode.frameBody(signature: String, superCls: Type = type(Object::class)) {
   interfaces = mutableListOf(type(DataFrame::class).internalName)
   val types = signature.map { FieldInfo.of(it) }.toTypedArray()
   val N = types.size
@@ -88,7 +88,7 @@ fun frame(signature: String) : ByteArray = `class`(public,"trufflestg/frame/dyna
   constructor(public, parameterTypes = *types.map{it.type}.toTypedArray()) {
     asm.`return` {
       aload_0
-      invokespecial(type(Object::class), void, "<init>")
+      invokespecial(superCls, void, "<init>")
       for (i in types.indices) {
         aload_0
         types[i].load(this, i+1)
@@ -100,7 +100,8 @@ fun frame(signature: String) : ByteArray = `class`(public,"trufflestg/frame/dyna
   constructor(public, parameterTypes = *arrayOf(`object`.array)) {
     asm.`return` {
       aload_0
-      invokespecial(type(Object::class), void, "<init>")
+
+      invokespecial(superCls, void, "<init>")
       iconst_0
       istore_2
 
@@ -128,20 +129,27 @@ fun frame(signature: String) : ByteArray = `class`(public,"trufflestg/frame/dyna
   getMethod(`object`, "getObject") { it.isObject }
 
   method(public and final, `object`, "getValue", +Slot::class) {
-    asm {
-      val defaultLabel = LabelNode()
-      val labels = members.map { LabelNode() }.toTypedArray()
-      aload_0
-      iload_1
-      tableswitch(0,N-1,defaultLabel,*labels)
-      for (i in labels.indices) {
-        add(labels[i])
-        getfield(type,members[i],types[i].type)
-        types[i].box(this)
-        areturn
+    if (N == 0) {
+      asm {
+        assembleThrow(this, +IndexOutOfBoundsException::class)
       }
-      add(defaultLabel)
-      assembleThrow(this, +IndexOutOfBoundsException::class)
+    } else {
+      asm {
+        val defaultLabel = LabelNode()
+        val labels = members.map { LabelNode() }.toTypedArray()
+        aload_0
+        iload_1
+        tableswitch(0,N-1,defaultLabel,*labels)
+        for (i in labels.indices) {
+          add(labels[i])
+          getfield(type,members[i],types[i].type)
+          types[i].box(this)
+          areturn
+        }
+        add(defaultLabel)
+        assembleThrow(this, +IndexOutOfBoundsException::class)
+      }
+
     }
   }
 
@@ -153,30 +161,15 @@ fun frame(signature: String) : ByteArray = `class`(public,"trufflestg/frame/dyna
   }
 }
 
+// TODO: add CompilerDirectives.ValueType to the generated class
+fun frame(signature: String, name: String) : ByteArray = `class`(public,name) {
+  frameBody(signature)
+}
+
 val child: AnnotationNode get() = annotationNode(+Node.Child::class)
 
 val code = +Code::class
 
-interface DataFrameBuilder { fun build(xs: Array<Any>): DataFrame }
-fun factory(sig: String, cls: Class<DataFrame>): ByteArray = `class`(
-  public and final, "trufflestg/frame/dynamic/${sig}Builder") {
-  interfaces = mutableListOf(type(DataFrameBuilder::class).internalName)
-  constructor(public) { asm {
-    aload_0
-    invokespecial(type(Object::class), void, "<init>")
-    `return`
-  }}
-  method(public and `final`, +DataFrame::class,"build", `object`.array) {
-    asm {
-      new(Type.getType(cls))
-      dup
-      aload_1
-      invokespecial(Type.getType(cls), void, "<init>", `object`.array)
-      checkcast(+DataFrame::class)
-      areturn
-    }
-  }
-}
 
 
 fun ByteArray.loadClassWith(className: String, lookup: (String) -> Class<*>?) : Class<*> {
@@ -201,48 +194,3 @@ fun ByteArray.loadClass(className: String,
   }
 
 
-val builderCache: HashMap<String, DataFrameBuilder> = HashMap()
-
-abstract class BuildFrame : Node() {
-  abstract fun execute(fields: Array<Any>): DataFrame
-
-  @Specialization(guards = ["matchesSig(fields, sig)"], limit = "1000000")
-  fun build(
-    fields: Array<Any>,
-    @Cached("getSignature(fields)", dimensions = 1) sig: Array<FieldInfo>,
-    @Cached("assembleSig(sig)") cstr: DataFrameBuilder
-  ): DataFrame {
-    return cstr.build(fields)
-  }
-
-  fun assembleSig(sigArr: Array<FieldInfo>): DataFrameBuilder {
-    CompilerDirectives.transferToInterpreter()
-    val sig = sigArr.map { it.sig }.joinToString("")
-    var builder = builderCache[sig]
-
-    if (builder === null) {
-      val klass = frame(sig).loadClass("trufflestg.frame.dynamic.$sig") as Class<DataFrame>
-      val builderKlass = factory(sig, klass).loadClass("trufflestg.frame.dynamic.${sig}Builder") {
-        when (it) {
-          "trufflestg.frame.dynamic.$sig" -> klass
-          else -> TODO(it)
-        }} as Class<DataFrameBuilder>
-      builder = builderKlass.constructors[0].newInstance() as DataFrameBuilder
-      builderCache[sig] = builder
-    }
-    return builder
-  }
-
-  @ExplodeLoop
-  fun matchesSig(fields: Array<Any>, sig: Array<FieldInfo>): Boolean {
-    sig.forEachIndexed { ix, v ->
-      if (!v.matches(fields[ix])) {
-        return false
-      }
-    }
-    return true
-  }
-
-  fun getSignature(fields: Array<Any>): Array<FieldInfo> = map(fields) { FieldInfo.from(it) }
-  fun equalsArray(x: ByteArray, y: ByteArray): Boolean = x.contentEquals(y)
-}

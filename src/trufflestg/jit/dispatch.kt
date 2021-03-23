@@ -94,6 +94,8 @@ class CallWhnf(@JvmField val argsSize: Int, val tail_call: Boolean): Node() {
 // (would need to statically allocate them)
 // TODO: param for limit of recursive occurences?
 // TODO: dispatch by arity first?
+// TODO: can we have the same callTarget at different arities? if so, should/can we share the DirectCallNode?
+// sharing the directcallnode might merge control flow or something?
 @ReportPolymorphism
 abstract class DispatchClosure(@JvmField val argsSize: Int, val tail_call: Boolean) : Node() {
   // pre: ys.size == argsSize

@@ -128,12 +128,12 @@ val primOps: Map<String, () -> StgPrimOp> = mapOf(
 
   "tagToEnum#" to { object : StgPrimOp1() {
     override fun execute(x: Any): Any {
-      val ty = (parent as StgPrim).type!!
+      val ty = (parent as? StgPrim)!!.type!!
       // TODO: use statically-allocated constructors
-      return StgData(ty.cons[(x as StgInt).x.toInt()], arrayOf())
+      return ty.cons[(x as? StgInt)!!.x.toInt()].build(arrayOf())
     }}
   },
-  "dataToTag#" to wrap1 { x: StgData -> val c = x.con; StgInt(c.ty.cons.indexOf(c).toLong()) },
+  "dataToTag#" to wrap1 { x: DataCon -> StgInt(x.getInfo().tag.toLong()) },
 
   // just reads a byte
   // TODO: make sure this is right (maybe should be unsigned)?
