@@ -32,6 +32,7 @@ abstract class DispatchCallTarget : Node() {
   }
 
   @Specialization
+  @ReportPolymorphism.Megamorphic
   fun callIndirect(callTarget: CallTarget, ys: Array<Any?>?,
                    @Cached("create()") callNode: IndirectCallNode): Any? {
     return CallUtils.callIndirect(callNode, callTarget, ys)
@@ -61,7 +62,10 @@ class CallWhnf(@JvmField val argsSize: Int, val tail_call: Boolean): Node() {
       if (seenThunkValue) {
         val v = fn.value_
         if (v === null) {
-          if (!seenThunkClosure) { invalidate(); seenThunkClosure = true }
+          if (!seenThunkClosure) {
+            invalidate(); seenThunkClosure = true
+            reportPolymorphicSpecialize()
+          }
           val c = fn.expectClosure()
           fn.clos = null
           val x = thunkDispatch.execute(frame, c, arrayOf())
@@ -143,9 +147,11 @@ abstract class DispatchClosure(@JvmField val argsSize: Int, val tail_call: Boole
 
   // TODO: should callIndirect & callIndirectOverapplied be merged?
 
-  // replaces => give up on callDirect once more than 3 variants
+  // replaces => delete callDirect once more than 3 variants
   // TODO: is replaces the right choice?
-  @Specialization(guards = ["fn.arity == argsSize"], replaces = ["callDirect"])
+//  @Specialization(guards = ["fn.arity == argsSize"], replaces = ["callDirect"])
+  @Specialization(guards = ["fn.arity == argsSize"])
+  @ReportPolymorphism.Megamorphic
   fun callIndirect(frame: VirtualFrame, fn: Closure, ys: Array<Any>,
                    @Cached("create()") callerNode: IndirectCallerNode): Any? {
     val args = appendLSkip(1, fn.papArgs, fn.papArgs.size, ys, argsSize)
@@ -155,7 +161,9 @@ abstract class DispatchClosure(@JvmField val argsSize: Int, val tail_call: Boole
   @Specialization(guards = [
     "fn.arity < argsSize",
     "arity == fn.arity"
-  ], replaces = ["callDirectOverapplied"])
+  ])
+//  ], replaces = ["callDirectOverapplied"])
+  @ReportPolymorphism.Megamorphic
   fun callIndirectOverapplied(frame: VirtualFrame, fn: Closure, ys: Array<Any>,
                               @Cached("fn.arity") arity: Int,
                               @Cached("create()") callerNode: IndirectCallerNode,

@@ -198,8 +198,7 @@ abstract class CaseAlts : Node() {
     @ExplodeLoop
     override fun execute(frame: VirtualFrame, x: Any?): Any? {
       if (ty.cons.size == 1 && ty.cons.contentEquals(cons)) {
-        val c = cons[0]
-        val x2 = CompilerDirectives.castExact(x, c.klass)
+        val x2 = CompilerDirectives.castExact(x, cons[0].klass)
         slots[0].forEachIndexed { sx, s -> frame.setObject(s, x2.getValue(sx)) }
         return bodies[0].execute(frame)
       } else {
@@ -211,7 +210,6 @@ abstract class CaseAlts : Node() {
             }
           } else {
             // TODO: use CompilerDirectives.isExact once its released
-            // TODO: skip isInstance when ty.cons.size == 1
             if (c.klass.isInstance(x)) {
               val x2 = CompilerDirectives.castExact(x, c.klass)
               profiles[ix].enter()
