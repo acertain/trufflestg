@@ -105,8 +105,11 @@ class DataConInfo internal constructor(
     builderKlass.constructors[0].newInstance() as DataFrameBuilder
   }
 
-  // TODO: return singleton when size == 0, use ptr equality for size == 0 in AlgAlts
-  fun build(args: Array<Any>): DataCon = builder.build(args) as DataCon
+  // null if size > 0
+  val singleton: DataCon? = if (size == 0) builder.build(arrayOf()) as DataCon else null
+
+  fun build(args: Array<Any>): DataCon =
+    if (size == 0) singleton!! else builder.build(args) as DataCon
 }
 
 

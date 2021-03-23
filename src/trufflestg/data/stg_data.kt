@@ -38,7 +38,7 @@ class StgData(
 
 // Int#, Word#, Char#, etc
 // note that currently ghc only has Int#, not Int32# etc, so we only need StgInt
-// FIXME ghc actually does have various Int*# variants, but they aren't used in Int32 etc? what is going on?
+// FIXME ghc actually does have various Int*# variants, but they aren't used in Int32 etc? what's going on?
 @CompilerDirectives.ValueType
 data class StgInt(@JvmField val x: Long) {
   fun toInt(): Int = x.toInt()

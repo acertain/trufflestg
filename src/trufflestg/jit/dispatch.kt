@@ -18,7 +18,7 @@ import com.oracle.truffle.api.profiles.BranchProfile
 
 // expects fully applied & doesn't trampoline
 // just an inline cache of DirectCallNodes & IndirectCallNodes
-@ReportPolymorphism
+//@ReportPolymorphism
 abstract class DispatchCallTarget : Node() {
   abstract fun executeDispatch(callTarget: CallTarget, ys: Array<Any>): Any
 
@@ -54,7 +54,7 @@ class CallWhnf(@JvmField val argsSize: Int, val tail_call: Boolean): Node() {
   fun execute(frame: VirtualFrame, fn: Any, ys: Array<Any>): Any {
     if (ys.size != argsSize) { panic("CallWhnf: bad ys") }
 
-    // the code duplication is so that when we have only seen one of evaluated or non-evaluated thunk, we only need to do one read
+    // the code duplication is so that when we have only seen one of evaluated or non-evaluated thunk we only need to do one read
     val f = if (fn is Thunk) {
       thunkProfile.enter()
       // TODO: concurrency (blackholes/synchronization)
@@ -96,7 +96,7 @@ class CallWhnf(@JvmField val argsSize: Int, val tail_call: Boolean): Node() {
 // TODO: dispatch by arity first?
 // TODO: can we have the same callTarget at different arities? if so, should/can we share the DirectCallNode?
 // sharing the directcallnode might merge control flow or something?
-@ReportPolymorphism
+//@ReportPolymorphism
 abstract class DispatchClosure(@JvmField val argsSize: Int, val tail_call: Boolean) : Node() {
   // pre: ys.size == argsSize
   abstract fun execute(frame: VirtualFrame, fn: Closure, ys: Array<Any>): Any

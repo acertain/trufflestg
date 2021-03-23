@@ -130,7 +130,7 @@ val primOps: Map<String, () -> StgPrimOp> = mapOf(
     override fun execute(x: Any): Any {
       val ty = (parent as? StgPrim)!!.type!!
       // TODO: use statically-allocated constructors
-      return ty.cons[(x as? StgInt)!!.x.toInt()].build(arrayOf())
+      return ty.cons[(x as? StgInt)!!.x.toInt()].singleton!!
     }}
   },
   "dataToTag#" to wrap1 { x: DataCon -> StgInt(x.getInfo().tag.toLong()) },

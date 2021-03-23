@@ -197,15 +197,29 @@ abstract class CaseAlts : Node() {
 
     @ExplodeLoop
     override fun execute(frame: VirtualFrame, x: Any?): Any? {
-      if (x !is DataCon) { panic("AlgAlts") }
-      cons.forEachIndexed { ix, c ->
-        // TODO: use CompilerDirectives.isExact once it's released
-        if (c.klass.isInstance(x)) {
-          val x2 = CompilerDirectives.castExact(x, c.klass)
-          profiles[ix].enter()
-          val sls = slots[ix]
-          sls.forEachIndexed { sx, s -> frame.setObject(s, x2.getValue(sx)) }
-          return bodies[ix].execute(frame)
+      if (ty.cons.size == 1 && ty.cons.contentEquals(cons)) {
+        val c = cons[0]
+        val x2 = CompilerDirectives.castExact(x, c.klass)
+        slots[0].forEachIndexed { sx, s -> frame.setObject(s, x2.getValue(sx)) }
+        return bodies[0].execute(frame)
+      } else {
+        cons.forEachIndexed { ix, c ->
+          if (c.size == 0) {
+            if (c.singleton!! == x) {
+              profiles[ix].enter()
+              return bodies[ix].execute(frame)
+            }
+          } else {
+            // TODO: use CompilerDirectives.isExact once its released
+            // TODO: skip isInstance when ty.cons.size == 1
+            if (c.klass.isInstance(x)) {
+              val x2 = CompilerDirectives.castExact(x, c.klass)
+              profiles[ix].enter()
+              val sls = slots[ix]
+              sls.forEachIndexed { sx, s -> frame.setObject(s, x2.getValue(sx)) }
+              return bodies[ix].execute(frame)
+            }
+          }
         }
       }
       return null
@@ -255,7 +269,7 @@ abstract class Arg : Node() {
     // also could do the same in ClosureRootNode
     // see https://github.com/oracle/graal/issues/627 & sl for what other langs do
     override fun execute(frame: VirtualFrame): Any {
-      return frame.getObject(slot) ?: panic("null Local")
+      return frame.getObject(slot)
     }
   }
 
