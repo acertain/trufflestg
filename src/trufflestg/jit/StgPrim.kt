@@ -67,9 +67,14 @@ val primOps: Map<String, () -> StgPrimOp> = mapOf(
   "==#" to wrap2 { x: StgInt, y: StgInt -> StgInt(if (x.x == y.x) 1L else 0L) },
 
   "addIntC#" to wrap2 { x: StgInt, y: StgInt ->
+    // TODO: slow
     try { UnboxedTuple(arrayOf(StgInt(Math.addExact(x.x, y.x)), StgInt(0L))) }
     catch (e: ArithmeticException) { UnboxedTuple(arrayOf(StgInt(x.x + y.x), StgInt(1L))) }
   },
+
+//  "timesInt2#" to wrap2 { x: StgInt, y: StgInt ->
+//
+//  },
 
   "newMVar#" to wrap1 { x: VoidInh -> UnboxedTuple(arrayOf(StgMVar(false, null))) },
   "putMVar#" to wrap3 { x: StgMVar, y: Any, z: VoidInh ->
@@ -136,7 +141,7 @@ val primOps: Map<String, () -> StgPrimOp> = mapOf(
     override fun execute(x: Any): Any {
       if (cons === null) {
         CompilerDirectives.transferToInterpreterAndInvalidate()
-        cons = (parent as? StgPrim)!!.type!!.singletons
+        cons = (parent as? StgPrim)!!.type!!.zeroArgCons
       }
       return cons!![(x as? StgInt)!!.x.toInt()]!!
     }
@@ -154,7 +159,7 @@ val primOps: Map<String, () -> StgPrimOp> = mapOf(
         ty = (x as DataCon).getInfo().type
         type = ty
       }
-      if (x is ZeroArgDataCon) { return StgInt(x.tag.toLong()) }
+      if (ty.hasZeroArgCons && x is ZeroArgDataCon) { return StgInt(x.tag.toLong()) }
       // TODO: profile which cons we've seen?
       ty.cons.forEachIndexed { ix, c ->
         if (c.size != 0) {
@@ -176,11 +181,11 @@ val primOps: Map<String, () -> StgPrimOp> = mapOf(
   "readInt8OffAddr#" to wrap3 { x: StgAddr, y: StgInt, _: VoidInh ->
     UnboxedTuple(arrayOf(StgInt(x[y.toInt()].toLong()))) },
   "readInt32OffAddr#" to wrap3 { x: StgAddr, y: StgInt, _: VoidInh ->
-    UnboxedTuple(arrayOf(StgInt(ByteBuffer.wrap(x.arr).getInt(4*y.toInt()).toLong()))) },
+    UnboxedTuple(arrayOf(StgInt(ByteBuffer.wrap(x.arr).getInt(x.offset+4*y.toInt()).toLong()))) },
   "readWord8OffAddr#" to wrap3 { x: StgAddr, y: StgInt, _: VoidInh ->
     UnboxedTuple(arrayOf(StgWord(x[y.toInt()].toULong()))) },
   "readAddrOffAddr#" to wrap3 { x: StgAddr, y: StgInt, _: VoidInh ->
-    val l = ByteBuffer.wrap(x.arr).getLong(8*y.toInt()).toInt()
+    val l = ByteBuffer.wrap(x.arr).getLong(x.offset + 8*y.toInt()).toInt()
     // FIXME: need to not have globalHeap reallocate...
     val w = StgAddr(globalHeap, l)
     UnboxedTuple(arrayOf(w))
@@ -188,7 +193,7 @@ val primOps: Map<String, () -> StgPrimOp> = mapOf(
   "writeWord8OffAddr#" to wrap4 { x: StgAddr, y: StgInt, z: StgWord, v: VoidInh -> x[y] = z.x.toByte(); v },
 
   "readWideCharOffAddr#" to wrap3 { x: StgAddr, y: StgInt, _: VoidInh ->
-    UnboxedTuple(arrayOf(StgChar(ByteBuffer.wrap(x.arr).getInt(4*y.toInt())))) },
+    UnboxedTuple(arrayOf(StgChar(ByteBuffer.wrap(x.arr).getInt(x.offset+4*y.toInt())))) },
   "writeWideCharOffAddr#" to wrap4 { x: StgAddr, y: StgInt, z: StgChar, v: VoidInh ->
     x.arr.write(x.offset + 4*y.x.toInt(), z.x.toByteArray()); v },
 

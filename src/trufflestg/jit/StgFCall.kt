@@ -107,20 +107,19 @@ val primFCalls: Map<String, () -> StgPrimOp> = mapOf(
     UnboxedTuple(arrayOf(StgInt(-1)))
   },
   "getProgArgv" to wrap3 { argc: StgAddr, argv: StgAddr, v: VoidInh ->
-    // TODO: put argc & argv into new arrays, make **argc = get_argc(), i think??
-    argc.arr.write(0, 2.toByteArray())
+    argc.arr.write(argc.offset, 2.toByteArray())
 
-    val ix = globalHeap.size.toLong().toByteArray()
-    // FIXME this breaks something (/something is broken that this reveals)
+    val ix1 = globalHeap.size
 //    globalHeap += ("fakeprogramname".toByteArray() + 0x00)
     globalHeap += ("2".toByteArray() + 0x00)
-    globalHeap += ("2".toByteArray() + 0x00)
+    val ix2 = globalHeap.size
+    globalHeap += ("20".toByteArray() + 0x00)
 
-    // TODO: need to write one ptr per arg
-    val argvIx = globalHeap.size.toLong().toByteArray()
-    globalHeap += ix
+    val argvIx = globalHeap.size
+    globalHeap += ix1.toLong().toByteArray()
+    globalHeap += ix2.toLong().toByteArray()
 
-    argv.arr.write(0,argvIx)
+    argv.arr.write(argv.offset, argvIx.toLong().toByteArray())
     UnboxedTuple(arrayOf())
   },
   "u_towupper" to wrap2 { x: StgInt, w: VoidInh ->

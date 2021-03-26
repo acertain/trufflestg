@@ -23,7 +23,10 @@ class TyCon private constructor(
 
   // non-null if nth con has no arguments
   @CompilerDirectives.CompilationFinal(dimensions = 1)
-  val singletons: Array<DataCon?> = cons.map { it.singleton }.toTypedArray()
+  val zeroArgCons: Array<DataCon?> = cons.map { it.zeroArgCon }.toTypedArray()
+
+  // any non-nulls in singletons?
+  val hasZeroArgCons: Boolean = zeroArgCons.any { it != null }
 
   override fun equals(other: Any?): Boolean = this === other
   override fun hashCode(): Int = name.hashCode()
@@ -151,10 +154,10 @@ class DataConInfo internal constructor(
   }
 
   // null if size > 0
-  val singleton: DataCon? = if (size == 0) ZeroArgDataCon(this, tag) else null
+  val zeroArgCon: ZeroArgDataCon? = if (size == 0) ZeroArgDataCon(this, tag) else null
 
   fun build(args: Array<Any>): DataCon =
-    if (size == 0) singleton!! else builder!!.build(args) as DataCon
+    if (size == 0) zeroArgCon!! else builder!!.build(args) as DataCon
 }
 
 

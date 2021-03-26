@@ -44,6 +44,7 @@ data class StgWord(@JvmField val x: ULong)
 data class StgChar(@JvmField val x: Int)
 
 // for now an Addr# is an offset into an array
+// TODO: make arr private & add more methods to avoid errors
 class StgAddr(
   @JvmField val arr: ByteArray,
   @JvmField val offset: Int

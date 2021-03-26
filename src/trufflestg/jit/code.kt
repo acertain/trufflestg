@@ -175,7 +175,7 @@ abstract class CaseAlts : Node() {
         cons.forEachIndexed { ix, c ->
           if (c.size == 0) {
             // TODO: use is ZeroArgDataCon and tag instead? might let it be compiled as a switch instead of ifs
-            if (c.singleton!! === x) {
+            if (c.zeroArgCon!! === x) {
               profiles[ix].enter()
               return bodies[ix].execute(frame)
             }
@@ -195,9 +195,9 @@ abstract class CaseAlts : Node() {
     }
   }
 
-  // used to evaluate unknown types
+  // used to whnf unknown types
   class PolyAlt: CaseAlts() {
-    // just return null, there has to be a case default
+    // just return null, there has to be a default case
     override fun execute(frame: VirtualFrame, x: Any?): Any? = null
   }
 }
@@ -279,16 +279,16 @@ abstract class Rhs : Node() {
     override fun execute(frame: VirtualFrame): Any = when {
       updFlag == Stg.UpdateFlag.Updatable && arity == 0 -> Thunk(Closure(captureEnv(frame), arity, callTarget), null)
       updFlag == Stg.UpdateFlag.ReEntrant -> Closure(captureEnv(frame), arity, callTarget)
-      // TODO: ghc says SingleEntry = don't need to blackhole or update http://hackage.haskell.org/package/ghc-8.10.2/docs/src/StgSyn.html#UpdateFlag
+      // ghc says SingleEntry = don't need to blackhole or update http://hackage.haskell.org/package/ghc-8.10.2/docs/src/StgSyn.html#UpdateFlag
       // TODO: is this right?
       updFlag == Stg.UpdateFlag.SingleEntry && arity == 0 -> Closure(captureEnv(frame), arity, callTarget)
       else -> panic("todo")
-    }   //Closure(captureEnv(frame), arrayOf(), arity, callTarget)
-//    override fun executeClosure(frame: VirtualFrame): Closure = Closure(captureEnv(frame), arrayOf(), arity, callTarget)
+    }
 
     @ExplodeLoop
     private fun captureEnv(frame: VirtualFrame): Array<Any> {
       if (!isSuperCombinator()) return emptyEnv
+      // TODO: skip the frame when captures.size == 1
       val cs = map(captures) { frame.getValue(it) }
       return arrayOf(builder.execute(cs))
     }
