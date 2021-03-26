@@ -23,16 +23,12 @@ class StgFCall(
   val name: String = (x.ctarget as Stg.CCallTarget.StaticTarget).string
   @field:Child var opNode: StgPrimOp? = primFCalls[name]?.let { it() }
 
-//  val mh: MethodHandle? = primFCalls[]
-//  val invoker: MethodHandle? = mh?.let { MethodHandles.spreadInvoker(it.type(), 0).bindTo(it) }
-
   override fun execute(frame: VirtualFrame): Any {
     val xs = map(args) { it.execute(frame) }
-//    if (x.ctarget is Stg.CCallTarget.DynamicTarget) TODO()
     if (opNode != null) {
       return opNode!!.run(frame, xs)
     } else {
-      panic{"foreign call nyi $name ${xs.contentToString()}"}
+      panic{"foreign call nyi $x ${xs.contentToString()}"}
     }
   }
 }

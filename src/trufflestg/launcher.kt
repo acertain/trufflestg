@@ -107,6 +107,8 @@ class Launcher : AbstractLanguageLauncher() {
       }
     }
 
+    polyglotOptions["engine.TraceCompilation"] = "true"
+
     if (file == null && iterator.hasNext()) file = Paths.get(iterator.next()).toFile()
     val programArgumentsList = arguments.subList(iterator.nextIndex(), arguments.size)
     programArgs = programArgumentsList.toTypedArray()

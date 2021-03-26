@@ -112,6 +112,8 @@ val primOps: Map<String, () -> StgPrimOp> = mapOf(
   "writeMutVar#" to wrap3 { x: StgMutVar, y: Any, v: VoidInh -> x.x = y; v },
 
   "leChar#" to wrap2 { x: StgChar, y: StgChar -> StgInt(if (x.x <= y.x) 1L else 0L) },
+  "gtChar#" to wrap2 { x: StgChar, y: StgChar -> StgInt(if (x.x > y.x) 1L else 0L) },
+  "geChar#" to wrap2 { x: StgChar, y: StgChar -> StgInt(if (x.x >= y.x) 1L else 0L) },
   "ord#" to wrap1 { x: StgChar -> StgInt(x.x.toLong()) }, // TODO: should this be an unsigned conversion?
   "chr#" to wrap1 { x: StgInt -> StgChar(x.x.toInt()) }, // TODO: ^
 
