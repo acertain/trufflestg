@@ -6,6 +6,7 @@ import org.intelligence.asm.*
 import trufflestg.frame.*
 import trufflestg.panic
 import trufflestg.stg.Stg
+import java.lang.IndexOutOfBoundsException
 import java.lang.reflect.Field
 import java.lang.reflect.Modifier
 
@@ -15,9 +16,14 @@ class TyCon private constructor(
   val name: FullName,
   src: Stg.STyCon
 ) {
+  @CompilerDirectives.CompilationFinal(dimensions = 1)
   val cons: Array<DataConInfo> = src.dataCons.mapIndexed { ix, x ->
     DataConInfo(FullName(name.unitId, name.module, x.name), this, x.rep, ix)
   }.toTypedArray()
+
+  // non-null if nth con has no arguments
+  @CompilerDirectives.CompilationFinal(dimensions = 1)
+  val singletons: Array<DataCon?> = cons.map { it.singleton }.toTypedArray()
 
   override fun equals(other: Any?): Boolean = this === other
   override fun hashCode(): Int = name.hashCode()
@@ -45,14 +51,53 @@ class TyCon private constructor(
 abstract class DataCon : DataFrame {
   // java doesn't have abstract fields, so we gotta do this :(
   abstract fun getInfo(): DataConInfo
+  // TODO: add getTag to DataCon? only if i'm actually using it (how i decide to implement dataToTag#)
 }
 
+// used to optimize dataToTag# for zero-arg data cons
+class ZeroArgDataCon(
+  val _info: DataConInfo,
+  val tag: Int
+) : DataCon() {
+  override fun getInfo() = _info
+
+  override fun isDouble(slot: Slot): Boolean = false
+  override fun isFloat(slot: Slot): Boolean = false
+  override fun isInteger(slot: Slot): Boolean = false
+  override fun isLong(slot: Slot): Boolean = false
+  override fun isObject(slot: Slot): Boolean = false
+
+  override fun getValue(slot: Int) {
+    CompilerDirectives.transferToInterpreter()
+    throw IndexOutOfBoundsException()
+  }
+  override fun getDouble(slot: Slot): Double {
+    CompilerDirectives.transferToInterpreter()
+    throw IndexOutOfBoundsException()
+  }
+  override fun getFloat(slot: Slot): Float {
+    CompilerDirectives.transferToInterpreter()
+    throw IndexOutOfBoundsException()
+  }
+  override fun getInteger(slot: Slot): Int {
+    CompilerDirectives.transferToInterpreter()
+    throw IndexOutOfBoundsException()
+  }
+  override fun getLong(slot: Slot): Long {
+    CompilerDirectives.transferToInterpreter()
+    throw IndexOutOfBoundsException()
+  }
+  override fun getObject(slot: Slot): Any? {
+    CompilerDirectives.transferToInterpreter()
+    throw IndexOutOfBoundsException()
+  }
+}
 
 
 class DataConInfo internal constructor(
   val name: FullName,
   val type: TyCon,
-  // not actually how it's stored
+  // not neccesarially actually how it's stored
   val rep: Stg.DataConRep,
   // constructor index for dataToTag#
   val tag: Int
@@ -65,7 +110,7 @@ class DataConInfo internal constructor(
 
   // TODO: unbox fields, and set field type when we know it can't be a thunk (bang patterns)
   // ghc might not be telling us about bang patterns though :(
-  val klass: Class<DataCon> = run {
+  val klass: Class<DataCon>? = if (size == 0) null else run {
     // TODO: better mangling
     fun mangle(x: String) = x.replace("""[\[\]]""".toRegex(), "_")
     val nm = mangle("trufflestg.types.${name.unitId}.${name.module}.${type.name.name}.${name.name}")
@@ -96,7 +141,7 @@ class DataConInfo internal constructor(
     kls as Class<DataCon>
   }
 
-  private val builder: DataFrameBuilder = run {
+  private val builder: DataFrameBuilder? = if (size == 0) null else run {
     val builderKlass = factory(klass as Class<DataFrame>).loadClass("${klass.name}Builder") {
       when (it) {
         klass.name -> klass
@@ -106,10 +151,10 @@ class DataConInfo internal constructor(
   }
 
   // null if size > 0
-  val singleton: DataCon? = if (size == 0) builder.build(arrayOf()) as DataCon else null
+  val singleton: DataCon? = if (size == 0) ZeroArgDataCon(this, tag) else null
 
   fun build(args: Array<Any>): DataCon =
-    if (size == 0) singleton!! else builder.build(args) as DataCon
+    if (size == 0) singleton!! else builder!!.build(args) as DataCon
 }
 
 

@@ -1,6 +1,7 @@
 
 package trufflestg.jit
 
+import com.oracle.truffle.api.CompilerDirectives
 import trufflestg.data.*
 import trufflestg.panic
 import trufflestg.todo
@@ -129,13 +130,41 @@ val primOps: Map<String, () -> StgPrimOp> = mapOf(
   "eqChar#" to wrap2 { x: StgChar, y: StgChar -> StgInt(if (x.x == y.x) 1L else 0L) },
 
   "tagToEnum#" to { object : StgPrimOp1() {
+    // TODO: need to do this lazily because parent isn't set at initialization
+    @CompilerDirectives.CompilationFinal(dimensions = 1)
+    var cons: Array<DataCon?>? = null
     override fun execute(x: Any): Any {
-      val ty = (parent as? StgPrim)!!.type!!
-      // TODO: use statically-allocated constructors
-      return ty.cons[(x as? StgInt)!!.x.toInt()].singleton!!
-    }}
+      if (cons === null) {
+        CompilerDirectives.transferToInterpreterAndInvalidate()
+        cons = (parent as? StgPrim)!!.type!!.singletons
+      }
+      return cons!![(x as? StgInt)!!.x.toInt()]!!
+    }
+    }
   },
-  "dataToTag#" to wrap1 { x: DataCon -> StgInt(x.getInfo().tag.toLong()) },
+  "dataToTag#" to { object : StgPrimOp1() {
+    // need to do this because apparently ghc doesn't (always?) set type for dataToTag#
+    @CompilerDirectives.CompilationFinal var type: TyCon? = null
+    @ExplodeLoop
+    // TODO: use getInfo().tag for big types?
+    override fun execute(x: Any): Any {
+      var ty = type
+      if (ty === null) {
+        CompilerDirectives.transferToInterpreterAndInvalidate()
+        ty = (x as DataCon).getInfo().type
+        type = ty
+      }
+      if (x is ZeroArgDataCon) { return StgInt(x.tag.toLong()) }
+      // TODO: profile which cons we've seen?
+      ty.cons.forEachIndexed { ix, c ->
+        if (c.size != 0) {
+          // TODO: use CompilerDirectives.isExact once its released
+          if (c.klass!!.isInstance(x)) { return StgInt(ix.toLong()) }
+        }
+      }
+      panic("bad dataToTag#")
+    }
+  } },
 
   // just reads a byte
   // TODO: make sure this is right (maybe should be unsigned)?
@@ -191,17 +220,17 @@ val primOps: Map<String, () -> StgPrimOp> = mapOf(
 
 
 // this makes a class per call site
-inline fun <reified X, reified Y> wrap1(crossinline f: (X) -> Y): () -> StgPrimOp = {
-  object : StgPrimOp1() { override fun execute(x: Any): Any = f(x as X) as Any }
+inline fun <reified X, reified Y : Any> wrap1(crossinline f: (X) -> Y): () -> StgPrimOp = {
+  object : StgPrimOp1() { override fun execute(x: Any): Any = f((x as? X)!!) }
 }
-inline fun <reified X, reified Y, reified Z> wrap2(crossinline f: (X, Y) -> Z): () -> StgPrimOp = {
-  object : StgPrimOp2() { override fun execute(x: Any, y: Any): Any = f(x as X, y as Y) as Any }
+inline fun <reified X, reified Y, reified Z : Any> wrap2(crossinline f: (X, Y) -> Z): () -> StgPrimOp = {
+  object : StgPrimOp2() { override fun execute(x: Any, y: Any): Any = f((x as? X)!!, (y as? Y)!!) }
 }
-inline fun <reified X, reified Y, reified Z, reified W> wrap3(crossinline f: (X, Y, Z) -> W): () -> StgPrimOp = {
-  object : StgPrimOp3() { override fun execute(x: Any, y: Any, z: Any): Any = f(x as X, y as Y, z as Z) as Any }
+inline fun <reified X, reified Y, reified Z, reified W : Any> wrap3(crossinline f: (X, Y, Z) -> W): () -> StgPrimOp = {
+  object : StgPrimOp3() { override fun execute(x: Any, y: Any, z: Any): Any = f((x as? X)!!, (y as? Y)!!, (z as? Z)!!) }
 }
-inline fun <reified X, reified Y, reified Z, reified W, reified A> wrap4(crossinline f: (X, Y, Z, A) -> W): () -> StgPrimOp = {
-  object : StgPrimOp4() { override fun execute(x: Any, y: Any, z: Any, a: Any): Any = f(x as X, y as Y, z as Z, a as A) as Any }
+inline fun <reified X, reified Y, reified Z, reified W : Any, reified A> wrap4(crossinline f: (X, Y, Z, A) -> W): () -> StgPrimOp = {
+  object : StgPrimOp4() { override fun execute(x: Any, y: Any, z: Any, a: Any): Any = f((x as? X)!!, (y as? Y)!!, (z as? Z)!!, (a as? A)!!) }
 }
 
 

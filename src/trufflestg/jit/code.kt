@@ -57,36 +57,6 @@ abstract class Code(val loc: Loc?) : Node(), InstrumentableNode {
     override fun hasTag(tag: Class<out Tag>?) = tag == StandardTags.CallTag::class.java || super.hasTag(tag)
   }
 
-//  class LetRec(
-//    val slot: FrameSlot,
-//    @field:Child var value: Code,
-//    @field:Child var body: Code,
-//    loc: Loc?
-//  ): Code(loc) {
-//    @CompilerDirectives.CompilationFinal var readTarget: RootCallTarget? = null
-//
-//    override fun execute(frame: VirtualFrame): Any? {
-//      if (readTarget === null) {
-//        CompilerDirectives.transferToInterpreterAndInvalidate()
-//        val language = lookupLanguageReference(Language::class.java).get()
-//        readTarget = Truffle.getRuntime().createCallTarget(ReadIndirectionRootNode(language))
-//      }
-//
-//      val indir = Indirection()
-//      val clos = Closure(null, arrayOf(indir), 0, Type.Arr(Type.Obj,type), readTarget!!)
-//      // need to set it here in case a lambda in value captures it
-//      frame.setObject(slot, clos)
-//      val x = value.executeAny(frame)
-//      // ... but if not, we can avoid the indirection
-//      // and need to set it here anyways in case value shadows us with a let
-////      frame.setObject(slot, x)
-//      frame.setObject(slot, clos)
-//      indir.value = x
-//      indir.set = true
-//      return body.execute(frame)
-//    }
-//  }
-
   class ConApp(
     @field:Child var x: Rhs.ArgCon
   ): Code(null) {
@@ -143,7 +113,7 @@ abstract class Code(val loc: Loc?) : Node(), InstrumentableNode {
       frame.setObject(evaluatedSlot, x)
       val y = alts.execute(frame, x)
       if (y != null) return y
-      return default?.execute(frame) ?: panic("bad case")
+      return (default ?: panic("bad case")).execute(frame)
     }
   }
 }
@@ -204,13 +174,14 @@ abstract class CaseAlts : Node() {
       } else {
         cons.forEachIndexed { ix, c ->
           if (c.size == 0) {
-            if (c.singleton!! == x) {
+            // TODO: use is ZeroArgDataCon and tag instead? might let it be compiled as a switch instead of ifs
+            if (c.singleton!! === x) {
               profiles[ix].enter()
               return bodies[ix].execute(frame)
             }
           } else {
             // TODO: use CompilerDirectives.isExact once its released
-            if (c.klass.isInstance(x)) {
+            if (c.klass!!.isInstance(x)) {
               val x2 = CompilerDirectives.castExact(x, c.klass)
               profiles[ix].enter()
               val sls = slots[ix]
@@ -226,6 +197,7 @@ abstract class CaseAlts : Node() {
 
   // used to evaluate unknown types
   class PolyAlt: CaseAlts() {
+    // just return null, there has to be a case default
     override fun execute(frame: VirtualFrame, x: Any?): Any? = null
   }
 }

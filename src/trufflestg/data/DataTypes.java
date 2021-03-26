@@ -3,10 +3,11 @@ package trufflestg.data;
 import com.oracle.truffle.api.dsl.TypeSystem;
 
 // Interesting runtime types
+// TODO
 @TypeSystem({
   Closure.class,
   Thunk.class,
-  StgData.class,
+  DataCon.class,
   StgArray.class,
   VoidInh.class,
   StgInt.class

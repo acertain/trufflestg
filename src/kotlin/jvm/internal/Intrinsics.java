@@ -5,6 +5,7 @@
 
 // Modified to transferToInterpreter before throwing any exceptions :)
 // TODO: make sure this works outside Truffle context (or write a version that does)
+// TODO: consider putting noops here, since it might let graal use signal handlers instead of explicit null checks
 
 package kotlin.jvm.internal;
 

@@ -29,13 +29,6 @@ data class FullName(
   override fun toString(): String = "$unitId:$module.$name"
 }
 
-// TODO: use the unboxed frame stuff or such to generate a class per con, also don't forget to intern nullary constructors
-@CompilerDirectives.ValueType
-class StgData(
-  @JvmField val con: DataCon,
-  @JvmField val args: Array<Any>
-)
-
 // Int#, Word#, Char#, etc
 // note that currently ghc only has Int#, not Int32# etc, so we only need StgInt
 // FIXME ghc actually does have various Int*# variants, but they aren't used in Int32 etc? what's going on?
