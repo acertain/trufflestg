@@ -41,7 +41,6 @@ fun Stg.Lit.compile(): Any = when (this) {
   is Stg.Lit.LitNullAddr -> NullAddr
   is Stg.Lit.LitNumber -> when (x) {
     Stg.LitNumType.LitNumInt -> StgInt(y.toLong())
-    Stg.LitNumType.LitNumInt -> StgInt(y.toLong())
     Stg.LitNumType.LitNumInt64 -> TODO()
     Stg.LitNumType.LitNumWord -> StgWord(y.toLong().toULong())
     Stg.LitNumType.LitNumWord64 -> TODO()

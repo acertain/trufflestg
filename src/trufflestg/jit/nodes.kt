@@ -12,15 +12,14 @@ import trufflestg.stg.Stg
 import com.oracle.truffle.api.CompilerDirectives
 import com.oracle.truffle.api.Truffle
 import com.oracle.truffle.api.dsl.TypeSystemReference
-import com.oracle.truffle.api.frame.FrameDescriptor
-import com.oracle.truffle.api.frame.FrameSlot
-import com.oracle.truffle.api.frame.MaterializedFrame
-import com.oracle.truffle.api.frame.VirtualFrame
+import com.oracle.truffle.api.frame.*
 import com.oracle.truffle.api.instrumentation.*
 import com.oracle.truffle.api.nodes.*
 import com.oracle.truffle.api.profiles.BranchProfile
 import com.oracle.truffle.api.source.Source
 import com.oracle.truffle.api.source.SourceSection
+import trufflestg.data.Closure
+import trufflestg.data.VoidInh
 import trufflestg.stg.*
 
 internal val noArguments = arrayOf<Any>()
@@ -41,6 +40,20 @@ abstract class CadenzaRootNode(
       (1L shl (shr(12) and 0x3f)) or
       (1L shl (shr(18) and 0x3f)) or
       (1L shl (shr(24) and 0x3f))
+  }
+}
+
+// wraps the Main closure so i can return it from TruffleLanguage.parse
+class MainRootNode(
+  val cl: Closure,
+  val language: Language
+): CadenzaRootNode(language, FrameDescriptor()) {
+  @field:Child var callWhnf = CallWhnf(cl.arity, false)
+  override fun execute(frame: VirtualFrame): Any {
+    val fr = Truffle.getRuntime().createVirtualFrame(arrayOf(), FrameDescriptor())
+    // TODO: should have no args?
+    callWhnf.execute(fr, cl, arrayOf(VoidInh, *frame.arguments))
+    return 0
   }
 }
 

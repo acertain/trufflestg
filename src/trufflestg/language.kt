@@ -7,6 +7,7 @@ import trufflestg.stg.CborModuleDir
 import trufflestg.stg.TopLevel
 import com.oracle.truffle.api.*
 import com.oracle.truffle.api.TruffleLanguage.ContextPolicy
+import com.oracle.truffle.api.TruffleLanguage.getCurrentContext
 import com.oracle.truffle.api.debug.DebuggerTags
 import com.oracle.truffle.api.instrumentation.ProvidedTags
 import com.oracle.truffle.api.instrumentation.StandardTags.*
@@ -17,6 +18,7 @@ import com.oracle.truffle.api.nodes.NodeInfo
 import com.oracle.truffle.api.source.SourceSection
 import org.graalvm.options.OptionDescriptors
 import org.graalvm.options.OptionValues
+import trufflestg.jit.MainRootNode
 import java.io.IOException
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
@@ -148,24 +150,22 @@ class Language : TruffleLanguage<Language.Context>() {
   @ExperimentalStdlibApi
   override fun parse(request: ParsingRequest): CallTarget {
     val source = request.source
+    val path = source.path
 
-    val path = source.characters.toString()
+    if (!path.endsWith(".truffleghc/Main")) {
+      // TODO
+      panic("Bad path $path: should end with .truffleghc/Main")
+    }
 
-    val d = CborModuleDir(this, path)
+    if (request.argumentNames.size > 0) {
+      throw panic("Main function takes no arguments")
+    }
 
+    val d = CborModuleDir(this, path.substringBeforeLast("/") + "/")
     val y = d["Main"]!!["main"]!!
     val z = whnf(y) as Closure
 
-    val q = try {
-      z.call(arrayOf(VoidInh))
-    } catch (e: Exception) {
-      e.printStackTrace()
-      throw e
-    }
-
-    println(q)
-
-    TODO("parse")
+    return Truffle.getRuntime().createCallTarget(MainRootNode(z, this))
   }
 
 //
@@ -191,7 +191,7 @@ class Language : TruffleLanguage<Language.Context>() {
 
   companion object {
     fun currentLanguage(): Language = getCurrentLanguage(Language::class.java)
-
+    fun currentContext(): Context = getCurrentContext(Language::class.java)
   }
 }
 

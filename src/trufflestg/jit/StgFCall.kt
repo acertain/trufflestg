@@ -1,9 +1,12 @@
 package trufflestg.jit
 
+import com.oracle.truffle.api.Truffle
+import com.oracle.truffle.api.TruffleLanguage
 import trufflestg.data.*
 import trufflestg.panic
 import trufflestg.stg.Stg
 import com.oracle.truffle.api.frame.VirtualFrame
+import trufflestg.Language
 import trufflestg.array_utils.*
 import java.security.MessageDigest
 
@@ -95,7 +98,7 @@ val primFCalls: Map<String, () -> StgPrimOp> = mapOf(
   },
 
   "hs_free_stable_ptr" to wrap2 { x: StablePtr, _: VoidInh ->
-    // FIXME: getting "deRefStablePtr after freeStablePtr", so i'm disabling this for now
+    // FIXME: getting deRefStablePtr after freeStablePtr, so i'm disabling this for now
 //    x.x = null
     UnboxedTuple(arrayOf())
   },
@@ -103,22 +106,25 @@ val primFCalls: Map<String, () -> StgPrimOp> = mapOf(
     UnboxedTuple(arrayOf(StgAddr("UTF-8".toByteArray() + zeroBytes, 0)))
   },
   "stg_sig_install" to wrap4 { x: StgInt, y: StgInt, z: NullAddr, _: VoidInh ->
-    // TODOs
+    // TODO
     UnboxedTuple(arrayOf(StgInt(-1)))
   },
   "getProgArgv" to wrap3 { argc: StgAddr, argv: StgAddr, v: VoidInh ->
-    argc.arr.write(argc.offset, 2.toByteArray())
+    val args = arrayOf(
+      "trufflestg",
+      *Language.currentContext().env.applicationArguments
+    )
 
-    val ix1 = globalHeap.size
-//    globalHeap += ("fakeprogramname".toByteArray() + 0x00)
-    globalHeap += ("2".toByteArray() + 0x00)
-    val ix2 = globalHeap.size
-    globalHeap += ("20".toByteArray() + 0x00)
+    val ixs = args.map { a ->
+      val ix = globalHeap.size
+      globalHeap += (a.toByteArray() + 0x00)
+      ix
+    }
 
     val argvIx = globalHeap.size
-    globalHeap += ix1.toLong().toByteArray()
-    globalHeap += ix2.toLong().toByteArray()
+    ixs.forEach { globalHeap += it.toLong().toByteArray() }
 
+    argc.arr.write(argc.offset, ixs.size.toByteArray())
     argv.arr.write(argv.offset, argvIx.toLong().toByteArray())
     UnboxedTuple(arrayOf())
   },

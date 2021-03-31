@@ -135,7 +135,8 @@ application {
     "--module-path=${compiler.asPath}",
     "--upgrade-module-path=${compiler.asPath}",
     "--add-opens=jdk.internal.vm.compiler/org.graalvm.compiler.truffle.runtime=ALL-UNNAMED",
-    "-Dtruffle.class.path.append=@TRUFFLESTG_APP_HOME@/lib/trufflestg-${project.version}.jar"
+    "-Dtruffle.class.path.append=@TRUFFLESTG_APP_HOME@/lib/trufflestg-${project.version}.jar",
+    "-Xss32m"
   )
 }
 

@@ -2,6 +2,7 @@
 package trufflestg.jit
 
 import com.oracle.truffle.api.CompilerDirectives
+import com.oracle.truffle.api.ExactMath
 import trufflestg.data.*
 import trufflestg.panic
 import trufflestg.todo
@@ -32,7 +33,8 @@ class StgPrim(
     val xs = args(frame)
     if (opNode != null) {
       if (args.size != opNode!!.arity) panic{"StgPrim $op bad arity"}
-      return opNode!!.run(frame, xs)
+      val x = opNode!!.run(frame, xs)
+      return x
     }
     panic{"$op nyi"}
   }
@@ -72,9 +74,17 @@ val primOps: Map<String, () -> StgPrimOp> = mapOf(
     catch (e: ArithmeticException) { UnboxedTuple(arrayOf(StgInt(x.x + y.x), StgInt(1L))) }
   },
 
-//  "timesInt2#" to wrap2 { x: StgInt, y: StgInt ->
-//
-//  },
+  "timesInt2#" to wrap2 { x: StgInt, y: StgInt ->
+    val hi = ExactMath.multiplyHigh(x.x, y.x)
+    val lo = x.x * y.x
+    UnboxedTuple(arrayOf(StgInt(
+      if (hi != (lo shr 63)) 1L else 0L
+    ), StgInt(hi), StgInt(lo)))
+  },
+
+  "quotRemInt#" to wrap2 { x: StgInt, y: StgInt ->
+    UnboxedTuple(arrayOf(StgInt(x.x / y.x), StgInt(x.x % y.x)))
+  },
 
   "newMVar#" to wrap1 { x: VoidInh -> UnboxedTuple(arrayOf(StgMVar(false, null))) },
   "putMVar#" to wrap3 { x: StgMVar, y: Any, z: VoidInh ->
@@ -148,10 +158,8 @@ val primOps: Map<String, () -> StgPrimOp> = mapOf(
     }
   },
   "dataToTag#" to { object : StgPrimOp1() {
-    // need to do this because apparently ghc doesn't (always?) set type for dataToTag#
     @CompilerDirectives.CompilationFinal var type: TyCon? = null
     @ExplodeLoop
-    // TODO: use getInfo().tag for big types?
     override fun execute(x: Any): Any {
       var ty = type
       if (ty === null) {
@@ -159,8 +167,10 @@ val primOps: Map<String, () -> StgPrimOp> = mapOf(
         ty = (x as DataCon).getInfo().type
         type = ty
       }
+      // could move this above getting ty? so that zero-arg cons don't need to deopt here
       if (ty.hasZeroArgCons && x is ZeroArgDataCon) { return StgInt(x.tag.toLong()) }
       // TODO: profile which cons we've seen?
+      // TODO: use getInfo().tag for big types?
       ty.cons.forEachIndexed { ix, c ->
         if (c.size != 0) {
           // TODO: use CompilerDirectives.isExact once its released

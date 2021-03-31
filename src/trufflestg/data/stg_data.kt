@@ -3,6 +3,9 @@ package trufflestg.data
 import trufflestg.panic
 import trufflestg.stg.Stg
 import com.oracle.truffle.api.CompilerDirectives
+import org.intelligence.diagnostics.Severity
+import org.intelligence.diagnostics.error
+import org.intelligence.pretty.Pretty
 import java.lang.ref.WeakReference
 import kotlin.reflect.KClass
 
@@ -84,7 +87,15 @@ class StgMutVar(
 )
 
 
-class HaskellException(val x: Any): Exception()
+class HaskellException(val x: Any) : RuntimeException() {
+  // TODO
+  override fun toString(): String =
+    stackTrace?.getOrNull(0)?.let {
+      Pretty.ppString {
+        error(Severity.todo, it.fileName, it.lineNumber, null, null, it.methodName)
+      }
+    } ?: super.toString()
+}
 
 
 // unlike haskell weakrefs, java weakrefs:
@@ -101,7 +112,9 @@ class WeakRef(
 @CompilerDirectives.ValueType
 class UnboxedTuple(
   @JvmField val x: Array<Any>
-)
+) {
+  override fun toString(): String = "(# " + x.joinToString(", ") { it.toString() } + " #)"
+}
 
 // ThreadId#
 class ThreadId(

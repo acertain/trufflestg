@@ -11,7 +11,7 @@ Use https://github.com/acertain/ghc-whole-program-compiler-project:
 - compile normally using ghc-wpc (pinned in that repo, but you might want to try a newer version, as you'll need to build ghc yourself otherwise)
 - use `external-stg/app/mkfullpak.hs` on the `Main.o_ghc_stgapp` file
 - use `external-stg/app/fullpack-prep-for-truffle.hs` on the `Main.fullpak`
-- more steps...
+- `./gradlew run --args="path/to/Main.truffleghc/Main args"` or `./gradlew installDist` then `build/install/trufflestg/bin/trufflestg path/to/Main.truffleghc/Main args`
 
 You might need to use graalvm 11 as your jvm too, idk
 

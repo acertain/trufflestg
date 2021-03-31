@@ -83,6 +83,7 @@ abstract class Code(val loc: Loc?) : Node(), InstrumentableNode {
     @field:Children val values: Array<Rhs>,
     @field:Child var body: Code
   ) : Code(null) {
+    @ExplodeLoop
     override fun execute(frame: VirtualFrame): Any? {
       val cs = slots.map {
         val t = Thunk(null, null)
@@ -92,7 +93,11 @@ abstract class Code(val loc: Loc?) : Node(), InstrumentableNode {
       values.forEachIndexed { ix, rhs ->
         val x = rhs.execute(frame)
         if (x is Thunk) {
-          cs[ix].clos = x.clos
+          if (x.clos === null) {
+            cs[ix].value_ = x.value_
+          } else {
+            cs[ix].clos = x.clos
+          }
         } else {
           frame.setObject(slots[ix], x)
           cs[ix].value_ = x

@@ -36,7 +36,13 @@ internal fun PolyglotException.prettyStackTrace(trim: Boolean = true) {
   val out = ansi()
   //if (isHostException) out.fgRed().a(asHostException().toString())
   //else out.fgBrightYellow().a(message)
-  out.a(if (isHostException) asHostException().toString() else message)
+  out.a(when {
+    isResourceExhausted -> "out of resources (stack or memory)"
+    isHostException -> asHostException().toString()
+    isExit -> "exit"
+    isGuestException -> message
+    else -> message
+  })
   out.reset().a('\n').fgBrightBlack()
   stackTrace.forEach {
     out.a(Attribute.ITALIC).a("  at ").a(Attribute.ITALIC_OFF).a(it).a('\n')
@@ -62,9 +68,7 @@ class Launcher : AbstractLanguageLauncher() {
       contextBuilder.build().use { ctx ->
         runVersionAction(versionAction, ctx.engine)
         val v = ctx.eval(Source.newBuilder(languageId, file).build())
-        val r = if (v.canExecute()) v.execute().asInt() else v.asInt()
-        println("Result: $r")
-        return 0
+        return if (v.canExecute()) v.execute().asInt() else v.asInt()
       }
     } catch (e: PolyglotException) {
       if (e.isExit) return e.exitStatus
@@ -153,7 +157,7 @@ class Launcher : AbstractLanguageLauncher() {
   companion object {
     @JvmStatic
     fun main(args: Array<String>) {
-      Launcher().launch(if (args.isEmpty()) arrayOf("examples/boyer.za") else args)
+      Launcher().launch(if (args.isEmpty()) arrayOf("/data/Code/ghc-whole-program-compiler-project/boyer.truffleghc/Main") else args)
     }
   }
 }

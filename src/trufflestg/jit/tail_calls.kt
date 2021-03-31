@@ -5,6 +5,7 @@ import com.oracle.truffle.api.frame.*
 import com.oracle.truffle.api.nodes.*
 import com.oracle.truffle.api.nodes.RepeatingNode.CONTINUE_LOOP_STATUS
 import com.oracle.truffle.api.profiles.BranchProfile
+import trufflestg.panic
 import java.lang.Exception
 import java.lang.reflect.Method
 
@@ -34,7 +35,7 @@ class TailCheck : Node() {
     }
     val mask = frame.getLong((root as ClosureRootNode).bloomFilterSlot)
     if (fn.rootNode !is CadenzaRootNode) {
-      throw Exception("calling non-canedza rootNode w/ wrong convention!")
+      panic("calling non-canedza rootNode w/ wrong convention!")
     }
     val targetMask = (fn.rootNode as CadenzaRootNode).mask
     if (mask and targetMask == targetMask) {
@@ -197,7 +198,7 @@ class SelfTailCallRepeatingNode(
   @field:Child var body: ClosureBody,
   private val closureRoot: ClosureRootNode
 ): RepeatingNode, Node() {
-  override fun executeRepeating(frame: VirtualFrame): Boolean { throw Exception() }
+  override fun executeRepeating(frame: VirtualFrame): Boolean { panic("") }
 
   override fun executeRepeatingWithValue(frame: VirtualFrame): Any? {
     return try {

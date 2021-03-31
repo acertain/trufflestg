@@ -1,1 +1,0 @@
-fix (\f n a b -> if eq n 0 then a else f (minus n 1) b (plus a b)) 20 0 1

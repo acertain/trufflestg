@@ -89,7 +89,7 @@ class Closure (
   }
 
   fun call(): Any {
-    if (arity != 0) { throw Exception("Closure.call: bad arity") }
+    if (arity != 0) { panic("Closure.call: bad arity") }
     return CallUtils.callTarget(callTarget, arrayOf(0L, *papArgs))
   }
 
