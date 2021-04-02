@@ -20,18 +20,19 @@ internal class Panic(message: String? = null) : RuntimeException(message) {
 }
 
 fun panic(msg: String, base: Throwable?): Nothing {
-  CompilerDirectives.transferToInterpreter()
+  // truffle uses transferToInterpreterAndInvalidate in CompilerDirectives.shouldNotReachHere
+  CompilerDirectives.transferToInterpreterAndInvalidate()
   throw Panic(msg, base).also { it.stackTrace = it.stackTrace.trim() }
 }
 
 @Suppress("unused")
 fun panic(msg: String): Nothing {
-  CompilerDirectives.transferToInterpreter()
+  CompilerDirectives.transferToInterpreterAndInvalidate()
   throw Panic(msg).also { it.stackTrace = it.stackTrace.trim() }
 }
 
 fun panic(msg: () -> String): Nothing {
-  CompilerDirectives.transferToInterpreter()
+  CompilerDirectives.transferToInterpreterAndInvalidate()
   throw Panic(msg()).also { it.stackTrace = it.stackTrace.trim() }
 }
 
@@ -46,7 +47,7 @@ internal class TODO() : RuntimeException() {
 }
 
 val todo: Nothing get() {
-  CompilerDirectives.transferToInterpreter()
+  CompilerDirectives.transferToInterpreterAndInvalidate()
   throw TODO().also { it.stackTrace = it.stackTrace.trim() }
 }
 

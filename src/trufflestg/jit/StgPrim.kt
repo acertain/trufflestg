@@ -45,15 +45,21 @@ class StgPrim(
 // i think usually we need to whnf ourselves?
 @OptIn(ExperimentalUnsignedTypes::class)
 val primOps: Map<String, () -> StgPrimOp> = mapOf(
-  // TODO: CallWhnf
-  "catch#" to wrap3 { x: Closure, y: Closure, z: VoidInh ->
-    // TODO: do i need to box the return value as a unboxed tuple?
-    try { x.call(arrayOf(VoidInh)) }
-    // TODO: should this catch java exceptions?
-    catch (e: HaskellException) { y.call(arrayOf(e.x, VoidInh)) }
-  },
-  "maskAsyncExceptions#" to wrap2 { x: Closure, _: VoidInh -> x.call(arrayOf(VoidInh)) },
-  // TODO: clean this up
+  "catch#" to { object : StgPrimOp(3) {
+    @field:Child var callWhnf1 = CallWhnf(1, false)
+    @field:Child var callWhnf2 = CallWhnf(2, false)
+    override fun run(frame: VirtualFrame, args: Array<Any>): Any =
+      // TODO: do i need to box the return value as a unboxed tuple?
+      try { callWhnf1.execute(frame, args[0], arrayOf(VoidInh)) }
+      // TODO: should this catch java exceptions?
+      catch (e: HaskellException) { callWhnf2.execute(frame, args[1], arrayOf(e.x, VoidInh)) }
+  }},
+
+  // TODO: implement these
+  "maskAsyncExceptions#" to { object : StgPrimOp(2) {
+    @field:Child var callWhnf = CallWhnf(1, false)
+    override fun run(frame: VirtualFrame, args: Array<Any>): Any = callWhnf.execute(frame, args[0], arrayOf(VoidInh))
+  }},
   "unmaskAsyncExceptions#" to { object : StgPrimOp(2) {
     @field:Child var callWhnf = CallWhnf(1, false)
     override fun run(frame: VirtualFrame, args: Array<Any>): Any = callWhnf.execute(frame, args[0], arrayOf(VoidInh))
@@ -168,7 +174,16 @@ val primOps: Map<String, () -> StgPrimOp> = mapOf(
         type = ty
       }
       // could move this above getting ty? so that zero-arg cons don't need to deopt here
-      if (ty.hasZeroArgCons && x is ZeroArgDataCon) { return StgInt(x.tag.toLong()) }
+      if (ty.hasZeroArgCons) {
+        // TODO: should this be <= 2 or such?
+        if (ty.numZeroArgCons == 1) {
+          ty.zeroArgCons.forEachIndexed { ix, y ->
+            if (y !== null && x === y) return ix
+          }
+        } else {
+          if (x is ZeroArgDataCon) return StgInt(x.tag.toLong())
+        }
+      }
       // TODO: profile which cons we've seen?
       // TODO: use getInfo().tag for big types?
       ty.cons.forEachIndexed { ix, c ->

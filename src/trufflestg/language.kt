@@ -1,13 +1,9 @@
 package trufflestg
 
 import trufflestg.data.Closure
-import trufflestg.data.VoidInh
-import trufflestg.data.whnf
 import trufflestg.stg.CborModuleDir
-import trufflestg.stg.TopLevel
 import com.oracle.truffle.api.*
 import com.oracle.truffle.api.TruffleLanguage.ContextPolicy
-import com.oracle.truffle.api.TruffleLanguage.getCurrentContext
 import com.oracle.truffle.api.debug.DebuggerTags
 import com.oracle.truffle.api.instrumentation.ProvidedTags
 import com.oracle.truffle.api.instrumentation.StandardTags.*

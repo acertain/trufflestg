@@ -148,9 +148,9 @@ val graalArgs = listOf(
   "--module-path=${compiler.asPath}",
   "--upgrade-module-path=${compiler.asPath}",
 //  "-XX:-UseJVMCIClassLoader",
-  "-Dgraalvm.locatorDisabled=true",
-  "-Dtruffle.class.path.append=build/libs/trufflestg-${project.version}.jar",
+//  "-Dgraalvm.locatorDisabled=true",
   "--add-opens=jdk.internal.vm.compiler/org.graalvm.compiler.truffle.runtime=ALL-UNNAMED",
+  "-Dtruffle.class.path.append=build/libs/trufflestg-${project.version}.jar",
   "-Xss32m"
 )
 

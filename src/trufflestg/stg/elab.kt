@@ -63,7 +63,8 @@ fun Stg.Expr.compile(ci: CompileInfo, fd: FrameDescriptor, tc: Boolean): Code = 
             ci.module.tyCons[altTy.x]!!,
             alts.map { ci.module.dataCons[(it.con as Stg.AltCon.AltDataCon).x]!! }.toTypedArray(),
             alts.map { map(it.binders) { x -> fd.addFrameSlot(x.binderId) } }.toTypedArray(),
-            alts.map { it.rhs.compile(ci, fd, tc) }.toTypedArray()
+            alts.map { it.rhs.compile(ci, fd, tc) }.toTypedArray(),
+            default?.rhs?.compile(ci, fd, tc)
           )
         }
         is Stg.AltType.MultiValAlt -> when {
@@ -76,18 +77,17 @@ fun Stg.Expr.compile(ci: CompileInfo, fd: FrameDescriptor, tc: Boolean): Code = 
           else -> TODO("$this")
         }
         is Stg.AltType.PolyAlt -> when {
-          alts.isEmpty() -> CaseAlts.PolyAlt()
+          alts.isEmpty() -> CaseAlts.PolyAlt(default!!.rhs.compile(ci, fd, tc))
           else -> TODO("$this")
         }
         is Stg.AltType.PrimAlt -> when {
           alts.all {  it.con is Stg.AltCon.AltLit && it.binders.isEmpty() } -> {
             val (cs, bs) = alts.map { (it.con as Stg.AltCon.AltLit).x.compile() to it.rhs.compile(ci, fd, tc) }.unzip()
-            CaseAlts.PrimAlts(cs.toTypedArray(), bs.toTypedArray())
+            CaseAlts.PrimAlts(cs.toTypedArray(), bs.toTypedArray(), default?.rhs?.compile(ci, fd, tc))
           }
           else -> TODO("$this")
         }
-      },
-      default?.rhs?.compile(ci, fd, tc)
+      }
     )
   }
   is Stg.Expr.StgConApp -> Code.ConApp(Rhs.ArgCon(ci.module.dataCons[x]!!, map(args) { it.compile(ci, fd) }))

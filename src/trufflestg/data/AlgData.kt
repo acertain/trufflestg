@@ -25,8 +25,9 @@ class TyCon private constructor(
   @CompilerDirectives.CompilationFinal(dimensions = 1)
   val zeroArgCons: Array<DataCon?> = cons.map { it.zeroArgCon }.toTypedArray()
 
+  val numZeroArgCons: Int = zeroArgCons.filterNotNull().size
   // any non-nulls in singletons?
-  val hasZeroArgCons: Boolean = zeroArgCons.any { it != null }
+  val hasZeroArgCons: Boolean = numZeroArgCons != 0
 
   override fun equals(other: Any?): Boolean = this === other
   override fun hashCode(): Int = name.hashCode()

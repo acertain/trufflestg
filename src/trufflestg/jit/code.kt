@@ -116,16 +116,12 @@ abstract class Code(val loc: Loc?) : Node(), InstrumentableNode {
   class Case(
     @field:Child var thing: Code,
     val evaluatedSlot: FrameSlot,
-    @field:Child var alts: CaseAlts,
-    @field:Child var default: Code?
+    @field:Child var alts: CaseAlts
   ) : Code(null) {
     override fun execute(frame: VirtualFrame): Any? {
       val x = thing.execute(frame)
       frame.setObject(evaluatedSlot, x)
-      val y = alts.execute(frame, x)
-      // TODO: this null check doesn't always get optimized away by graal, mb remove it?
-      if (y != null) return y
-      return (default ?: panic("bad case")).execute(frame)
+      return alts.execute(frame, x)
     }
   }
 }
@@ -136,7 +132,8 @@ abstract class CaseAlts : Node() {
 
   class PrimAlts(
     @CompilerDirectives.CompilationFinal(dimensions = 1) val alts: Array<Any>,
-    @field:Children val bodies: Array<Code>
+    @field:Children val bodies: Array<Code>,
+    @field:Child var default: Code?
   ) : CaseAlts() {
     @CompilerDirectives.CompilationFinal(dimensions = 1) val profiles: Array<BranchProfile> = Array(alts.size) { BranchProfile.create() }
 
@@ -149,7 +146,7 @@ abstract class CaseAlts : Node() {
           return bodies[ix].execute(frame)
         }
       }
-      return null
+      return default!!.execute(frame)
     }
   }
 
@@ -173,7 +170,8 @@ abstract class CaseAlts : Node() {
     val ty: TyCon,
     @CompilerDirectives.CompilationFinal(dimensions = 1) val cons: Array<DataConInfo>,
     @CompilerDirectives.CompilationFinal(dimensions = 2) val slots: Array<Array<FrameSlot>>,
-    @field:Children val bodies: Array<Code>
+    @field:Children val bodies: Array<Code>,
+    @field:Child var default: Code?
   ): CaseAlts() {
     @CompilerDirectives.CompilationFinal(dimensions = 1) val profiles: Array<BranchProfile> = Array(cons.size) { BranchProfile.create() }
 
@@ -203,14 +201,13 @@ abstract class CaseAlts : Node() {
           }
         }
       }
-      return null
+      return default!!.execute(frame)
     }
   }
 
   // used to whnf unknown types
-  class PolyAlt: CaseAlts() {
-    // just return null, there has to be a default case
-    override fun execute(frame: VirtualFrame, x: Any?): Any? = null
+  class PolyAlt(@field:Child var default: Code): CaseAlts() {
+    override fun execute(frame: VirtualFrame, x: Any?): Any? = default.execute(frame)
   }
 }
 
@@ -287,14 +284,15 @@ abstract class Rhs : Node() {
     // split between capturing Lam and not?
     // might help escape analysis w/ App
     override fun execute(frame: VirtualFrame): Any = when {
-      updFlag == Stg.UpdateFlag.Updatable && arity == 0 -> Thunk(Closure(captureEnv(frame), arity, callTarget), null)
-      updFlag == Stg.UpdateFlag.ReEntrant -> Closure(captureEnv(frame), arity, callTarget)
+      updFlag == Stg.UpdateFlag.Updatable && arity == 0 -> Thunk(mkClosure(callTarget, arity, captureEnv(frame)), null)
+      updFlag == Stg.UpdateFlag.ReEntrant -> mkClosure(callTarget, arity, captureEnv(frame))
       // ghc says SingleEntry = don't need to blackhole or update http://hackage.haskell.org/package/ghc-8.10.2/docs/src/StgSyn.html#UpdateFlag
       // TODO: is this right?
-      updFlag == Stg.UpdateFlag.SingleEntry && arity == 0 -> Closure(captureEnv(frame), arity, callTarget)
+      updFlag == Stg.UpdateFlag.SingleEntry && arity == 0 -> mkClosure(callTarget, arity, captureEnv(frame))
       else -> panic("todo")
     }
 
+    // should match ClosureRootNode.buildFrame
     @ExplodeLoop
     private fun captureEnv(frame: VirtualFrame): Array<Any> {
       if (!isSuperCombinator()) return emptyEnv

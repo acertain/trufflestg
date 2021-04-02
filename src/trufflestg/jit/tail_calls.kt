@@ -24,16 +24,7 @@ class TailCheck : Node() {
   private val tailCallProfile: BranchProfile = BranchProfile.create()
   private val unrollProfile: BranchProfile = BranchProfile.create()
 
-  fun tailCheck(frame: VirtualFrame, fn: RootCallTarget, args: Array<Any>) {
-    if (root == null) {
-      CompilerDirectives.transferToInterpreterAndInvalidate()
-      root = rootNode
-    }
-
-    if (root !is ClosureRootNode) {
-      throw TailCallException(fn, args)
-    }
-    val mask = frame.getLong((root as ClosureRootNode).bloomFilterSlot)
+  fun tailCheck(mask: Long, fn: RootCallTarget, args: Array<Any>) {
     if (fn.rootNode !is CadenzaRootNode) {
       panic("calling non-canedza rootNode w/ wrong convention!")
     }
@@ -49,7 +40,7 @@ class TailCheck : Node() {
   }
 }
 
-class DirectCallerNode(val callTarget: RootCallTarget) : Node() {
+class DirectCallerNode(val callTarget: RootCallTarget, val tail_call: Boolean) : Node() {
   @Child private var callNode: DirectCallNode = DirectCallNode.create(callTarget)
   @Child internal var loop = TailCallLoop()
   @Child var tailCheck = TailCheck()
@@ -57,9 +48,10 @@ class DirectCallerNode(val callTarget: RootCallTarget) : Node() {
   private val normalCallProfile = BranchProfile.create()
   private val tailCallProfile = BranchProfile.create()
 
-  fun call(frame: VirtualFrame, args: Array<Any>, tail_call: Boolean): Any? {
+  fun call(mask: Long, args: Array<Any>): Any {
+    // TODO: mb don't need to check tail_call since mask = 0L if not tail?
     return if (tail_call) {
-      tailCheck.tailCheck(frame, callTarget, args)
+      tailCheck.tailCheck(mask, callTarget, args)
       CallUtils.callDirect(callNode, args)
     } else {
       try {
@@ -75,13 +67,13 @@ class DirectCallerNode(val callTarget: RootCallTarget) : Node() {
   }
 
   companion object {
-    @JvmStatic fun create(callTarget: RootCallTarget) = DirectCallerNode(callTarget)
+    @JvmStatic fun create(callTarget: RootCallTarget, tail_call: Boolean) = DirectCallerNode(callTarget, tail_call)
   }
 }
 
 
 
-class IndirectCallerNode() : Node() {
+class IndirectCallerNode(val tail_call: Boolean) : Node() {
   @Child private var callNode: IndirectCallNode = IndirectCallNode.create()
   @Child internal var loop = TailCallLoop()
   @Child var tailCheck = TailCheck()
@@ -89,9 +81,9 @@ class IndirectCallerNode() : Node() {
   private val normalCallProfile = BranchProfile.create()
   private val tailCallProfile = BranchProfile.create()
 
-  fun call(frame: VirtualFrame, callTarget: RootCallTarget, args: Array<Any>, tail_call: Boolean): Any? {
+  fun call(mask: Long, callTarget: RootCallTarget, args: Array<Any>): Any {
     return if (tail_call) {
-      tailCheck.tailCheck(frame, callTarget, args)
+      tailCheck.tailCheck(mask, callTarget, args)
       CallUtils.callIndirect(callNode, callTarget, args)
     } else {
       try {
@@ -107,7 +99,7 @@ class IndirectCallerNode() : Node() {
   }
 
   companion object {
-    @JvmStatic fun create() = IndirectCallerNode()
+    @JvmStatic fun create(tail_call: Boolean) = IndirectCallerNode(tail_call)
   }
 }
 
