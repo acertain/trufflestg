@@ -24,20 +24,24 @@ fun <A> withAnsi(f: () -> A): A {
   }
 }
 
-internal fun PolyglotException.prettyStackTrace(trim: Boolean = true) {
-  val stackTrace = polyglotStackTrace.toMutableList()
-  if (trim) {
+internal fun PolyglotException.prettyStackTrace() {
+//  if (isResourceExhausted)
+  val stackTrace =
+//    if (isResourceExhausted) stackTrace.toMutableList()
+    polyglotStackTrace.toMutableList()
+  if (!isInternalError && !isResourceExhausted) {
     val iterator = stackTrace.listIterator(stackTrace.size)
     while (iterator.hasPrevious()) {
       if (iterator.previous().isHostFrame) iterator.remove()
       else break
     }
   }
+//  if (isResourceExhausted) stackTrace.forEach { println(it) }
   val out = ansi()
   //if (isHostException) out.fgRed().a(asHostException().toString())
   //else out.fgBrightYellow().a(message)
   out.a(when {
-    isResourceExhausted -> "out of resources (stack or memory)"
+    isResourceExhausted -> "out of resources (stack or memory): $message"
     isHostException -> asHostException().toString()
     isExit -> "exit"
     isGuestException -> message
@@ -72,7 +76,7 @@ class Launcher : AbstractLanguageLauncher() {
       }
     } catch (e: PolyglotException) {
       if (e.isExit) return e.exitStatus
-      e.prettyStackTrace(!e.isInternalError)
+      e.prettyStackTrace()
       return -1
     } catch (e: IOException) {
       println(

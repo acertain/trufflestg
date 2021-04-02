@@ -87,7 +87,7 @@ class CallWhnf(@JvmField val argsSize: Int, val tail_call: Boolean): Node() {
 
     if (f !is Closure) {
       if (argsSize == 0) { return f }
-      panic("CallWhnf: attempt to apply a non-closure $f to arguments")
+      panic{"CallWhnf: attempt to apply a non-closure $f to arguments"}
     }
     return dispatch.execute(frame, f, ys)
   }

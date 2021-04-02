@@ -52,7 +52,12 @@ class MainRootNode(
   override fun execute(frame: VirtualFrame): Any {
     val fr = Truffle.getRuntime().createVirtualFrame(arrayOf(), FrameDescriptor())
     // TODO: should have no args?
-    callWhnf.execute(fr, cl, arrayOf(VoidInh, *frame.arguments))
+    try {
+      callWhnf.execute(fr, cl, arrayOf(VoidInh, *frame.arguments))
+    } catch (e: StackOverflowError) {
+      e.printStackTrace()
+      throw e
+    }
     return 0
   }
 }
@@ -66,9 +71,27 @@ open class ClosureBody constructor(
   open fun execute(frame: VirtualFrame): Any? = content.execute(frame)
   override fun isInstrumentable() = true
   override fun createWrapper(probe: ProbeNode): InstrumentableNode.WrapperNode = ClosureBodyWrapper(this, this, probe)
-  override fun hasTag(tag: Class<out Tag>?) = tag == StandardTags.RootBodyTag::class.java
+  override fun hasTag(tag: Class<out Tag>?) = tag == StandardTags.RootBodyTag::class.java || tag == StandardTags.RootTag::class.java
   override fun getSourceSection(): SourceSection? = parent.sourceSection
 }
+
+//@GenerateWrapper
+//// RootNodes can't be instrumentable, so all of the actual logic has to be here
+//open class ClosureRoot(
+//  frameDescriptor: FrameDescriptor = FrameDescriptor(),
+//  // slot = closure.env[ix]
+//  @CompilerDirectives.CompilationFinal(dimensions = 1) val envPreamble: Array<Pair<FrameSlot, Int>>,
+//  @CompilerDirectives.CompilationFinal(dimensions = 1) val argPreamble: Array<Pair<FrameSlot, Int>>,
+//  @field:Child var body: ClosureBody
+//) : Node(), InstrumentableNode {
+//  override fun execute(frame: VirtualFrame): Any? {
+//
+//  }
+//
+//  override fun isInstrumentable(): Boolean = true
+//  override fun createWrapper(probe: ProbeNode): InstrumentableNode.WrapperNode = ClosureRootWrapper(this, this, probe)
+//  override fun hasTag(tag: Class<out Tag>?) = tag == StandardTags.RootTag::class.java
+//}
 
 // TODO: instrumentable body prelude node w/ RootTag?
 @TypeSystemReference(DataTypes::class)
@@ -81,9 +104,9 @@ open class ClosureRootNode(
   @CompilerDirectives.CompilationFinal(dimensions = 1) val argPreamble: Array<Pair<FrameSlot, Int>>,
   @field:Child var body: ClosureBody,
   val module: Module,
-  // the stg TopLevel we are in
+  // the TopLevel binding we are in
   val parentTopLevel: TopLevel,
-  val srcSection: SourceSection?,
+  val srcSection: SourceSection,
   val updFlag: Stg.UpdateFlag,
 ) : CadenzaRootNode(language, frameDescriptor) {
   val arity = if (isSuperCombinator()) argPreamble.size + 1 else argPreamble.size
@@ -128,11 +151,16 @@ open class ClosureRootNode(
     }
   }
 
-  override fun getSourceSection(): SourceSection? = srcSection //loc?.let { source.section(it) }
-//  override fun isInstrumentable() = loc !== null
+//  override fun getSourceSection(): SourceSection? = srcSection //loc?.let { source.section(it) }
+  override fun getSourceSection(): SourceSection? = null
+  override fun isInstrumentable() = true
+  // FIXME: indicate somehow when we're just a closure from a fn vs are a top-level fn
+  // include name or binderId from binder?
   override fun getQualifiedName() = parentTopLevel.fullName
   override fun getName() = parentTopLevel.fullName
 //  override fun getName() = parentTopLevel.name
+
+  override fun toString(): String = "$name@${Integer.toHexString(hashCode())}"
 
   override fun isCloningAllowed() = true
 }

@@ -64,7 +64,6 @@ class Thunk(
 val emptyEnv: Array<Any> = arrayOf()
 
 @CompilerDirectives.ValueType
-// TODO: i'm using Closure when arity == 0 sometimes, make sure it works
 class Closure (
   @JvmField @CompilerDirectives.CompilationFinal(dimensions = 1) val papArgs: Array<Any>,
   // left

@@ -151,19 +151,6 @@ val graalArgs = listOf(
   "-Dgraalvm.locatorDisabled=true",
   "-Dtruffle.class.path.append=build/libs/trufflestg-${project.version}.jar",
   "--add-opens=jdk.internal.vm.compiler/org.graalvm.compiler.truffle.runtime=ALL-UNNAMED",
-  "--add-opens=org.graalvm.truffle/com.oracle.truffle.api.source=ALL-UNNAMED",
-
-  "-Dgraal.Dump=Truffle",
-  "-Dgraal.PrintGraph=Network",
-  "-Dgraal.CompilationFailureAction=ExitVM",
-//  "-Dgraal.TraceTruffleCompilation=true",
-//  "-Dgraal.TraceTruffleSplitting=true",
-//  "-Dgraal.TruffleTraceSplittingSummary=true",
-//  "-Dgraal.TraceTruffleAssumptions=true",
-//  "-Dgraal.TraceTruffleTransferToInterpreter=true",
-  // limit size of graphs for easier visualization
-//  "-Dgraal.TruffleMaximumRecursiveInlining=0",
-//  "-Dgraal.LoopPeeling=false",
   "-Xss32m"
 )
 

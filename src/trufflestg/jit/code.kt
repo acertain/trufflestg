@@ -30,13 +30,14 @@ private inline fun isSuperCombinator(callTarget: RootCallTarget) =
 abstract class Code(val loc: Loc?) : Node(), InstrumentableNode {
   constructor(that: Code) : this(that.loc)
 
-  // should never return null, the Any? is just to get kotlin to not insert null checks...
+  // should never return null, the Any? is just to get kotlin to insert less null checks
   abstract fun execute(frame: VirtualFrame): Any?
 
-  override fun getSourceSection(): SourceSection? = loc?.let { rootNode?.sourceSection?.source?.section(it) }
-  override fun isInstrumentable() = loc !== null
+//  override fun getSourceSection(): SourceSection? = loc?.let { rootNode?.sourceSection?.source?.section(it) }
+  override fun isInstrumentable() = true
 
-  override fun hasTag(tag: Class<out Tag>?) = tag == StandardTags.ExpressionTag::class.java
+  override fun hasTag(tag: Class<out Tag>?) = tag ==
+    StandardTags.ExpressionTag::class.java || tag == StandardTags.StatementTag::class.java
   override fun createWrapper(probe: ProbeNode): InstrumentableNode.WrapperNode = CodeWrapper(this, this, probe)
 
   @TypeSystemReference(DataTypes::class)
@@ -67,6 +68,7 @@ abstract class Code(val loc: Loc?) : Node(), InstrumentableNode {
     override fun execute(frame: VirtualFrame): Any = x
   }
 
+  // TODO: set loc from defLoc
   class Let(
     val slot: FrameSlot,
     @field:Child var value: Rhs,
@@ -95,7 +97,11 @@ abstract class Code(val loc: Loc?) : Node(), InstrumentableNode {
         if (x is Thunk) {
           if (x.clos === null) {
             cs[ix].value_ = x.value_
+            frame.setObject(slots[ix], x.value_)
           } else {
+            // this should be safe/not result in duplicate computation:
+            // x was just allocated by a Lam = can't be ref'd anywhere else
+            // since Rhs is either a Lam or a data constructor
             cs[ix].clos = x.clos
           }
         } else {
@@ -117,6 +123,7 @@ abstract class Code(val loc: Loc?) : Node(), InstrumentableNode {
       val x = thing.execute(frame)
       frame.setObject(evaluatedSlot, x)
       val y = alts.execute(frame, x)
+      // TODO: this null check doesn't always get optimized away by graal, mb remove it?
       if (y != null) return y
       return (default ?: panic("bad case")).execute(frame)
     }
@@ -263,8 +270,6 @@ abstract class Rhs : Node() {
   @Suppress("NOTHING_TO_INLINE")
   @TypeSystemReference(DataTypes::class)
   @NodeInfo(shortName = "Lambda")
-  // when arity == 0 need to allocate a thunk (if Updatable)
-  // TODO: or a nullary Closure if ReEntrant ?
   // a StgRhsClosure
   class RhsClosure(
     @CompilerDirectives.CompilationFinal(dimensions = 1) val captures: Array<FrameSlot>,
@@ -298,6 +303,15 @@ abstract class Rhs : Node() {
       return arrayOf(builder.execute(cs))
     }
   }
+
+//  // a StgRhsClosure that is just doing partial application = we can avoid the intermediate call
+//  class RhsPap(
+//    @Child var x: Arg.Var,
+//    @Children val args: Array<Arg>,
+//    val updFlag: Stg.UpdateFlag
+//  ) : Rhs() {
+//    override fun execute(frame: VirtualFrame): Any = todo
+//  }
 
   class ArgCon(
     val con: DataConInfo,

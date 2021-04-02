@@ -108,7 +108,7 @@ class WeakRef(
   @JvmField val finalizer: Any? = null
 )
 
-// TODO: don't store these in closures & etc, only use them in functions, ensureVirtualized
+// TODO: don't store these in closures & etc, only use them in functions, maybe ensureVirtualized
 @CompilerDirectives.ValueType
 class UnboxedTuple(
   @JvmField val x: Array<Any>

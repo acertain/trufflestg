@@ -122,16 +122,51 @@ fun Stg.Rhs.compile(bi: Stg.SBinder, ci: CompileInfo, fd: FrameDescriptor): Rhs 
   is Stg.Rhs.StgRhsCon -> Rhs.ArgCon(ci.module.dataCons[con]!!, map(args) { it.compile(ci, fd) })
 }
 
-fun Stg.SrcSpan.build(): SourceSection? = when (this) {
-  is Stg.SrcSpan.ARealSrcSpan -> null
-//    Source.newBuilder("haskell", "", sp.file)
-//          .content(Source.CONTENT_NONE).build()
-//          .createSection(sp.sline, sp.scol, sp.eline, sp.ecol)
-  is Stg.SrcSpan.UnhelpfulSpan -> null
+fun Stg.SrcSpan.build(ci: CompileInfo): SourceSection = when (this) {
+  is Stg.SrcSpan.ARealSrcSpan ->
+    Source.newBuilder("haskell", "", sp.file)
+          .content(Source.CONTENT_NONE).build()
+          .createSection(sp.sline, sp.scol, sp.eline, sp.ecol)
+  // TODO: include UnhelpfulSpan.name somehow?
+  is Stg.SrcSpan.UnhelpfulSpan ->
+        Source.newBuilder("haskell", "", ci.module.filePath ?: ci.topLevel.fullName)
+          .content(Source.CONTENT_NONE).build()
+          .createUnavailableSection()
 }
 
-// TODO: convert Let rhs=Ap into a Pap when possible (avoid unnecessary Closure indirection)
+// TODO: from ghc:
+// - selector thunks
+// - AP thunks (\f x -> f x) etc, have a static AP_n CallTarget
 fun Stg.Rhs.StgRhsClosure.compileC(bi: Stg.SBinder, ci: CompileInfo, fd: FrameDescriptor): Rhs {
+  // TODO: this requires PAP/Closure being able to maybe point to a thunk
+  // ghc doesn't do this afaict
+  // is it worth it?
+//  // avoid creating a CallTarget when we are just a partial application
+//  // TODO: for StgOpApp and StgConApp mb have a global closure per primop & constructor & pap that?
+//  if (body is Stg.Expr.StgApp) {
+//    val bndsVs = bnds.map { it.binderId }.toSet()
+//
+//    var papIx = body.args.indexOfFirst { it is Stg.Arg.StgVarArg && bndsVs.contains(it.x) }
+//    if (papIx == -1) papIx = body.args.size
+//    val bndArgs = body.args.slice(0 until papIx)
+//    val papArgs = body.args.drop(papIx)
+//
+//    // TODO: sometimes we could be a pap but there's an extra arg at the end that gets thrown away (from State# RealWorld)
+//    // if so should check if last arg in app is realWorld#/void# and if rep of last bnd is VoidRep
+//
+//    if (papArgs.all { it is Stg.Arg.StgVarArg } &&
+//      papArgs.filterIsInstance(Stg.Arg.StgVarArg::class.java).map { it.x }.toList()
+//      == bnds.map { it.binderId }.toList()) {
+////      if (upd != Stg.UpdateFlag.ReEntrant) { println(upd) }
+//      return Rhs.RhsPap(body.x.compile(ci, fd), bndArgs.map { it.compile(ci, fd) }.toTypedArray(), upd)
+//    } else {
+////      println("$upd ${ci.module.fullName}")
+////      println(papArgs)
+////      println("${fvs.toList()} ${bnds.map { it.binderId }} ")
+////      println(body)
+//    }
+//  }
+
   val bodyFd = FrameDescriptor()
 
   val captures = arrayListOf<FrameSlot>()
@@ -148,6 +183,7 @@ fun Stg.Rhs.StgRhsClosure.compileC(bi: Stg.SBinder, ci: CompileInfo, fd: FrameDe
 
   val bodyCode = body.compile(ci, bodyFd, true)
 
+
   return Rhs.RhsClosure(
     captures.toTypedArray(),
     bnds.size,
@@ -162,7 +198,7 @@ fun Stg.Rhs.StgRhsClosure.compileC(bi: Stg.SBinder, ci: CompileInfo, fd: FrameDe
         ClosureBody(bodyCode),
         ci.module,
         ci.topLevel,
-        bi.defLoc.build(),
+        bi.defLoc.build(ci),
         upd
       )
     )
@@ -234,7 +270,7 @@ sealed class TopLevel(
   class StringLit(
     module: Module,
     binder: Stg.SBinder,
-    val string: ByteArray
+    string: ByteArray
   ) : TopLevel(binder, module) {
     val x = StgAddr(string, 0)
     override fun getValue(): Any = x
@@ -242,14 +278,30 @@ sealed class TopLevel(
   class DataCon(
     module: Module,
     binder: Stg.SBinder,
-    con: Stg.Rhs.StgRhsCon
+    val con: Stg.Rhs.StgRhsCon,
+    // part of a rec group?
+    private val rec: Boolean
   ) : TopLevel(binder, module) {
-    val con: Any by lazy {
+    private var initialized: Boolean = false
+    private var val_: Any? = null
+
+    override fun getValue(): Any {
+      if (initialized) return val_!!
+      if (rec) {
+        val_ = Thunk(null, null)
+        initialized = true
+      }
+
       val fd = FrameDescriptor()
       val fr = Truffle.getRuntime().createVirtualFrame(arrayOf(), fd)
-      con.compile(binder, CompileInfo(module, this), fd).execute(fr)
+      val x = con.compile(binder, CompileInfo(module, this), fd).execute(fr)
+
+      if (rec) (val_ as Thunk).value_ = x
+       else initialized = true
+      val_ = x
+
+      return x
     }
-    override fun getValue(): Any = con
   }
 }
 
@@ -287,29 +339,28 @@ class Module(
 ) {
   val unitId: String = src.unitId.x
   val name: String = src.name.x
-  val fullName = unitId + ":" + name
+  val fullName = "$unitId:$name"
+  val filePath: String? = src.sourceFilePath.orElse(null)
 
-  val external_ids: Map<Stg.BinderId, Pair<Pair<Stg.UnitId, Stg.ModuleName>, Stg.SBinder>> =
+  private val external_ids: Map<Stg.BinderId, Pair<Pair<Stg.UnitId, Stg.ModuleName>, Stg.SBinder>> =
     src.externalTopIds
       .flatMap { it.second.flatMap { x -> x.second.map { y -> y.binderId to ((it.first to x.first) to y) } } }
       .associate { x -> x }
 
-  val top_bindings: Map<Stg.BinderId, TopLevel> = src.topBindings.flatMap {
-    fun rhs(b: Stg.SBinder, r: Stg.Rhs): TopLevel = when (r) {
+  private val top_bindings: Map<Stg.BinderId, TopLevel> = src.topBindings.flatMap {
+    fun rhs(b: Stg.SBinder, r: Stg.Rhs, rec: Boolean): TopLevel = when (r) {
       is Stg.Rhs.StgRhsClosure -> TopLevel.Function(this, b, r)
-      is Stg.Rhs.StgRhsCon -> TopLevel.DataCon(this, b, r)
+      is Stg.Rhs.StgRhsCon -> TopLevel.DataCon(this, b, r, rec)
     }
 
     when(it) {
       is Stg.TopBinding.StgTopLifted -> when(it.x) {
-        is Stg.Binding.StgNonRec -> listOf(rhs(it.x.x, it.x.y))
-        is Stg.Binding.StgRec -> it.x.x.map { x -> rhs(x.first, x.second) }
+        is Stg.Binding.StgNonRec -> listOf(rhs(it.x.x, it.x.y, false))
+        is Stg.Binding.StgRec -> it.x.x.map { x -> rhs(x.first, x.second, true) }
       }
       is Stg.TopBinding.StgTopStringLit -> listOf(TopLevel.StringLit(this, it.x, it.y))
     }
   }.associateBy { it.binder.binderId }
-
-//  val (tyCons, dataCons) = TODO()
 
   val tyCons: Map<Stg.TyConId, TyCon>
   val dataCons: Map<Stg.DataConId, DataConInfo>

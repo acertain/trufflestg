@@ -140,21 +140,19 @@ class Language : TruffleLanguage<Language.Context>() {
     return true
   }
 
-//
 //  // stubbed: for now inline parsing requests just return 'const'
 //  override fun parse(request: InlineParsingRequest?): InlineCode {
 //    val body = k(Nat, Nat)
 //    return InlineCode(this, body)
 //  }
 
-  @ExperimentalStdlibApi
   override fun parse(request: ParsingRequest): CallTarget {
     val source = request.source
     val path = source.path
 
     if (!path.endsWith(".truffleghc/Main")) {
       // TODO
-      panic("Bad path $path: should end with .truffleghc/Main")
+      panic{"Bad path $path: should end with .truffleghc/Main"}
     }
 
     if (request.argumentNames.size > 0) {
@@ -162,10 +160,9 @@ class Language : TruffleLanguage<Language.Context>() {
     }
 
     val d = CborModuleDir(this, path.substringBeforeLast("/") + "/")
-    val y = d["Main"]!!["main"]!!
-    val z = whnf(y) as Closure
+    val y = d["Main"]!!["main"]!! as Closure
 
-    return Truffle.getRuntime().createCallTarget(MainRootNode(z, this))
+    return Truffle.getRuntime().createCallTarget(MainRootNode(y, this))
   }
 
 //
@@ -177,17 +174,6 @@ class Language : TruffleLanguage<Language.Context>() {
 //      "main" -> 42
 //      else -> null
 //    }
-
-//  @Suppress("UNUSED_PARAMETER")
-//  private fun s(tx: Type, ty: Type, tz: Type): Code = todo
-//  private fun k(tx: Type, ty: Type) = binary({ x, _ -> x }, tx, ty)
-//  private fun i(tx: Type) = unary({ x -> x }, tx)
-//
-//  @Suppress("UNUSED_PARAMETER")
-//  inline fun unary(f: (x: Term) -> Term, argument: Type): Code = todo
-//
-//  @Suppress("UNUSED_PARAMETER")
-//  inline fun binary(f: (x: Term, y: Term) -> Term, tx: Type, ty: Type): Code = todo
 
   companion object {
     fun currentLanguage(): Language = getCurrentLanguage(Language::class.java)
