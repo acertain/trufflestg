@@ -122,11 +122,9 @@ open class ClosureRootNode(
 
   @ExplodeLoop
   fun buildFrame(arguments: Array<Any>, local: VirtualFrame) {
-    val offset = if (isSuperCombinator()) 2 else 1
+    for ((slot, x) in envPreamble) local.setObject(slot, arguments[x+1])
+    val offset = envPreamble.size + 1
     for ((slot, x) in argPreamble) local.setObject(slot, arguments[x+offset])
-    if (isSuperCombinator()) { // supercombinator, given environment
-      readFrame.execute(local, arguments[1])
-    }
   }
 
   @ExplodeLoop
@@ -152,7 +150,7 @@ open class ClosureRootNode(
   }
 
 //  override fun getSourceSection(): SourceSection? = srcSection //loc?.let { source.section(it) }
-  override fun getSourceSection(): SourceSection? = null
+//  override fun getSourceSection(): SourceSection? = null
   override fun isInstrumentable() = true
   // FIXME: indicate somehow when we're just a closure from a fn vs are a top-level fn
   // include name or binderId from binder?

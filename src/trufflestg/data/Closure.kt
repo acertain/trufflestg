@@ -94,6 +94,9 @@ fun mkClosure(fn: RootCallTarget, arity: Int, args: Array<Any>): Closure = when 
   0 -> Closure_0(fn, arity)
   1 -> Closure_1(fn, arity, args[0])
   2 -> Closure_2(fn, arity, args[0], args[1])
+  3 -> Closure_3(fn, arity, args[0], args[1], args[2])
+  4 -> Closure_4(fn, arity, args[0], args[1], args[2], args[3])
+  5 -> Closure_5(fn, arity, args[0], args[1], args[2], args[3], args[4])
   else -> Closure_generic(fn, arity, args)
 }
 
@@ -182,6 +185,76 @@ class Closure_2(
 ) : Closure(callTarget, arity) {
   override fun papSize(): Int = 2
   override fun papArgs(): Array<Any> = arrayOf(x, y)
+
+  override fun pap_1(x: Any): Closure = mkClosure(callTarget, arity - 1, append(papArgs(), arrayOf(x)))
+  override fun pap_2(x: Any, y: Any): Closure = mkClosure(callTarget, arity - 2, append(papArgs(), arrayOf(x,y)))
+  override fun pap_3(x: Any, y: Any, z: Any): Closure = mkClosure(callTarget, arity - 3, append(papArgs(), arrayOf(x,y,z)))
+  override fun pap_4(a: Any, b: Any, c: Any, d: Any): Closure = mkClosure(callTarget, arity - 4, append(papArgs(), arrayOf(a,b,c,d)))
+  override fun pap_5(a: Any, b: Any, c: Any, d: Any, e: Any): Closure = mkClosure(callTarget, arity - 5, append(papArgs(), arrayOf(a,b,c,d,e)))
+  override fun pap_6(a: Any, b: Any, c: Any, d: Any, e: Any, f: Any): Closure = mkClosure(callTarget, arity - 6, append(papArgs(), arrayOf(a,b,c,d,e,f)))
+  override fun pap_7(a: Any, b: Any, c: Any, d: Any, e: Any, f: Any, g: Any): Closure = mkClosure(callTarget, arity - 7, append(papArgs(), arrayOf(a,b,c,d,e,f,g)))
+  override fun pap_8(a: Any, b: Any, c: Any, d: Any, e: Any, f: Any, g: Any, h: Any): Closure = mkClosure(callTarget, arity - 8, append(papArgs(), arrayOf(a,b,c,d,e,f,g,h)))
+  override fun pap_generic(ys: Array<Any>): Closure = mkClosure(callTarget, arity - ys.size, append(papArgs(), ys))
+}
+
+
+@CompilerDirectives.ValueType
+class Closure_3(
+  callTarget: RootCallTarget,
+  arity: Int,
+  val x: Any,
+  val y: Any,
+  val z: Any
+) : Closure(callTarget, arity) {
+  override fun papSize(): Int = 3
+  override fun papArgs(): Array<Any> = arrayOf(x, y, z)
+
+  override fun pap_1(x: Any): Closure = mkClosure(callTarget, arity - 1, append(papArgs(), arrayOf(x)))
+  override fun pap_2(x: Any, y: Any): Closure = mkClosure(callTarget, arity - 2, append(papArgs(), arrayOf(x,y)))
+  override fun pap_3(x: Any, y: Any, z: Any): Closure = mkClosure(callTarget, arity - 3, append(papArgs(), arrayOf(x,y,z)))
+  override fun pap_4(a: Any, b: Any, c: Any, d: Any): Closure = mkClosure(callTarget, arity - 4, append(papArgs(), arrayOf(a,b,c,d)))
+  override fun pap_5(a: Any, b: Any, c: Any, d: Any, e: Any): Closure = mkClosure(callTarget, arity - 5, append(papArgs(), arrayOf(a,b,c,d,e)))
+  override fun pap_6(a: Any, b: Any, c: Any, d: Any, e: Any, f: Any): Closure = mkClosure(callTarget, arity - 6, append(papArgs(), arrayOf(a,b,c,d,e,f)))
+  override fun pap_7(a: Any, b: Any, c: Any, d: Any, e: Any, f: Any, g: Any): Closure = mkClosure(callTarget, arity - 7, append(papArgs(), arrayOf(a,b,c,d,e,f,g)))
+  override fun pap_8(a: Any, b: Any, c: Any, d: Any, e: Any, f: Any, g: Any, h: Any): Closure = mkClosure(callTarget, arity - 8, append(papArgs(), arrayOf(a,b,c,d,e,f,g,h)))
+  override fun pap_generic(ys: Array<Any>): Closure = mkClosure(callTarget, arity - ys.size, append(papArgs(), ys))
+}
+
+@CompilerDirectives.ValueType
+class Closure_4(
+  callTarget: RootCallTarget,
+  arity: Int,
+  val x: Any,
+  val y: Any,
+  val z: Any,
+  val w: Any
+) : Closure(callTarget, arity) {
+  override fun papSize(): Int = 4
+  override fun papArgs(): Array<Any> = arrayOf(x, y, z, w)
+
+  override fun pap_1(x: Any): Closure = mkClosure(callTarget, arity - 1, append(papArgs(), arrayOf(x)))
+  override fun pap_2(x: Any, y: Any): Closure = mkClosure(callTarget, arity - 2, append(papArgs(), arrayOf(x,y)))
+  override fun pap_3(x: Any, y: Any, z: Any): Closure = mkClosure(callTarget, arity - 3, append(papArgs(), arrayOf(x,y,z)))
+  override fun pap_4(a: Any, b: Any, c: Any, d: Any): Closure = mkClosure(callTarget, arity - 4, append(papArgs(), arrayOf(a,b,c,d)))
+  override fun pap_5(a: Any, b: Any, c: Any, d: Any, e: Any): Closure = mkClosure(callTarget, arity - 5, append(papArgs(), arrayOf(a,b,c,d,e)))
+  override fun pap_6(a: Any, b: Any, c: Any, d: Any, e: Any, f: Any): Closure = mkClosure(callTarget, arity - 6, append(papArgs(), arrayOf(a,b,c,d,e,f)))
+  override fun pap_7(a: Any, b: Any, c: Any, d: Any, e: Any, f: Any, g: Any): Closure = mkClosure(callTarget, arity - 7, append(papArgs(), arrayOf(a,b,c,d,e,f,g)))
+  override fun pap_8(a: Any, b: Any, c: Any, d: Any, e: Any, f: Any, g: Any, h: Any): Closure = mkClosure(callTarget, arity - 8, append(papArgs(), arrayOf(a,b,c,d,e,f,g,h)))
+  override fun pap_generic(ys: Array<Any>): Closure = mkClosure(callTarget, arity - ys.size, append(papArgs(), ys))
+}
+
+@CompilerDirectives.ValueType
+class Closure_5(
+  callTarget: RootCallTarget,
+  arity: Int,
+  val x: Any,
+  val y: Any,
+  val z: Any,
+  val w: Any,
+  val a: Any
+) : Closure(callTarget, arity) {
+  override fun papSize(): Int = 5
+  override fun papArgs(): Array<Any> = arrayOf(x, y, z, w, a)
 
   override fun pap_1(x: Any): Closure = mkClosure(callTarget, arity - 1, append(papArgs(), arrayOf(x)))
   override fun pap_2(x: Any, y: Any): Closure = mkClosure(callTarget, arity - 2, append(papArgs(), arrayOf(x,y)))

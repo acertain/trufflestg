@@ -298,7 +298,7 @@ abstract class Rhs : Node() {
       if (!isSuperCombinator()) return emptyEnv
       // TODO: skip the frame when captures.size == 1
       val cs = map(captures) { frame.getValue(it) }
-      return arrayOf(builder.execute(cs))
+      return cs
     }
   }
 

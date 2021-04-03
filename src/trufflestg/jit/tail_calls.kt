@@ -46,21 +46,34 @@ class DirectCallerNode(val callTarget: RootCallTarget, val tail_call: Boolean) :
   @Child var tailCheck = TailCheck()
 
   private val normalCallProfile = BranchProfile.create()
-  private val tailCallProfile = BranchProfile.create()
+  @CompilerDirectives.CompilationFinal var seenTailCall: Boolean = false
+
+  private fun doCall(args: Array<Any>): Any = if (seenTailCall) {
+    // force inlining
+    // TODO: is this safe?
+    // i think only when we're a tail_call (due to tailCheck)
+    CallUtils.callTarget(callTarget, args)
+  } else {
+    try {
+      CallUtils.callDirect(callNode, args)
+    } catch (tc: TailCallException) {
+      invalidate()
+      seenTailCall = true
+      throw tc
+    }
+  }
 
   fun call(mask: Long, args: Array<Any>): Any {
-    // TODO: mb don't need to check tail_call since mask = 0L if not tail?
     return if (tail_call) {
       tailCheck.tailCheck(mask, callTarget, args)
-      CallUtils.callDirect(callNode, args)
+      doCall(args)
     } else {
       try {
         args[0] = 0L
-        val x = CallUtils.callDirect(callNode, args)
+        val x = doCall(args)
         normalCallProfile.enter()
         x
       } catch (tailCall: TailCallException) {
-        tailCallProfile.enter()
         loop.execute(tailCall)
       }
     }
