@@ -5,6 +5,10 @@
 
 A proof of concept for haskell on truffle, seeing if I can get better performance than ghc
 
+So far, I can't
+
+With that said, this is probably the best (easiest & fastest) way to get haskell on the jvm (if you care about that)
+
 ## Running
 
 Use https://github.com/acertain/ghc-whole-program-compiler-project:
@@ -21,12 +25,13 @@ You might need to use graalvm 11 as your jvm too, idk
 
 * `gradle distZip` or `gradle distTar` will create an archive containing the required runtime jars. However, you'll need to have `JAVA_HOME` set to point to your Graal installation, if you want to use the `trufflestg` script from the installation folder.
 
-## TODO
+## Incomplete
 
-This code is very much a work-in-progress:
+This is *not* a complete haskell implementation:
 - Most primops are missing
 - FFI doesn't work, and only a few C functions are polyfilled
-- There's bugs
+- There's probably bugs
+
 
 ## Windows XP
 
