@@ -2,10 +2,13 @@
 package trufflestg.data
 
 import com.oracle.truffle.api.CompilerDirectives
+import com.oracle.truffle.api.frame.FrameSlotTypeException
+import org.graalvm.nativeimage.ImageInfo
 import org.intelligence.asm.*
 import trufflestg.frame.*
 import trufflestg.panic
 import trufflestg.stg.Stg
+import java.lang.ClassCastException
 import java.lang.IndexOutOfBoundsException
 import java.lang.reflect.Field
 import java.lang.reflect.Modifier
@@ -18,15 +21,15 @@ class TyCon private constructor(
 ) {
   @CompilerDirectives.CompilationFinal(dimensions = 1)
   val cons: Array<DataConInfo> = src.dataCons.mapIndexed { ix, x ->
-    DataConInfo(FullName(name.unitId, name.module, x.name), this, x.rep, ix)
+    DataConInfo.build(x, FullName(name.unitId, name.module, x.name), this, ix)
   }.toTypedArray()
 
-  // non-null if nth con has no arguments
+  // non-null if nth con has no arguments, used for tagToEnum#
   @CompilerDirectives.CompilationFinal(dimensions = 1)
-  val zeroArgCons: Array<DataCon?> = cons.map { it.zeroArgCon }.toTypedArray()
+  val zeroArgCons: Array<DataCon?> = cons.map { if (it is ZeroArgDataConInfo) it.singleton else null }.toTypedArray()
 
   val numZeroArgCons: Int = zeroArgCons.filterNotNull().size
-  // any non-nulls in singletons?
+  // any non-nulls in zeroArgCons?
   val hasZeroArgCons: Boolean = numZeroArgCons != 0
 
   override fun equals(other: Any?): Boolean = this === other
@@ -60,7 +63,7 @@ abstract class DataCon : DataFrame {
 
 // used to optimize dataToTag# for zero-arg data cons
 class ZeroArgDataCon(
-  val _info: DataConInfo,
+  val _info: ZeroArgDataConInfo,
   val tag: Int
 ) : DataCon() {
   override fun getInfo() = _info
@@ -97,24 +100,98 @@ class ZeroArgDataCon(
   }
 }
 
+class ArrayDataCon(
+  val _info: DataConInfo,
+  val tag: Int,
+  val args: Array<Any>
+): DataCon() {
+  override fun getInfo(): DataConInfo = _info
+  override fun getValue(slot: Slot): Any? = args[slot]
+  override fun getObject(slot: Slot): Any? = args[slot]
+  override fun isObject(slot: Slot): Boolean = true
 
-class DataConInfo internal constructor(
+  override fun getDouble(slot: Slot): Double = throw FrameSlotTypeException()
+  override fun isDouble(slot: Slot): Boolean = false
+  override fun getFloat(slot: Slot): Float = throw FrameSlotTypeException()
+  override fun isFloat(slot: Slot): Boolean = false
+  override fun getInteger(slot: Slot): Int = throw FrameSlotTypeException()
+  override fun isInteger(slot: Slot): Boolean = false
+  override fun getLong(slot: Slot): Long = throw FrameSlotTypeException()
+  override fun isLong(slot: Slot): Boolean = false
+}
+
+abstract class DataConInfo(
+  val src: Stg.SDataCon,
   val name: FullName,
   val type: TyCon,
-  // not neccesarially actually how it's stored
-  val rep: Stg.DataConRep,
-  // constructor index for dataToTag#
-  val tag: Int
+  val tag: Int,
+  val size: Int
 ) {
-  // number of fields
-  val size: Int = when (rep) {
-    is Stg.DataConRep.AlgDataCon -> rep.x.size
-    is Stg.DataConRep.UnboxedTupleCon -> rep.x
+  abstract fun build(args: Array<Any>): DataCon
+  // possibly very unsafe
+  abstract fun unsafeCast(x: Any?): DataCon
+  abstract fun tryIs(x: Any?): DataCon?
+
+  companion object {
+    fun build(src: Stg.SDataCon, name: FullName, type: TyCon, tag: Int): DataConInfo {
+      // number of fields
+      val size: Int = when (src.rep) {
+        is Stg.DataConRep.AlgDataCon -> src.rep.x.size
+        is Stg.DataConRep.UnboxedTupleCon -> src.rep.x
+      }
+      return when {
+        size == 0 -> ZeroArgDataConInfo(src, name, type, tag, size)
+        !ImageInfo.inImageCode() -> DynamicClassDataConInfo(src, name, type, tag, size)
+        else -> ArrayDataConInfo(src, name, type, tag, size)
+      }
+    }
   }
+}
+
+class ZeroArgDataConInfo(
+  src: Stg.SDataCon,
+  name: FullName,
+  type: TyCon,
+  tag: Int,
+  size: Int
+) : DataConInfo(src, name, type, tag, size) {
+  val singleton = ZeroArgDataCon(this, tag)
+
+  override fun build(args: Array<Any>): DataCon = singleton
+  override fun unsafeCast(x: Any?): DataCon = singleton
+  override fun tryIs(x: Any?): DataCon? = if (x === singleton) singleton else null
+}
+
+class ArrayDataConInfo(
+  src: Stg.SDataCon,
+  name: FullName,
+  type: TyCon,
+  tag: Int,
+  size: Int
+): DataConInfo(src, name, type, tag, size) {
+  override fun build(args: Array<Any>): DataCon = ArrayDataCon(this, tag, args)
+  override fun unsafeCast(x: Any?): DataCon = CompilerDirectives.castExact(x, ArrayDataCon::class.java)
+  override fun tryIs(x: Any?): DataCon? = if (x is ArrayDataCon && x._info === this && x.tag == tag) x else null
+}
+
+class DynamicClassDataConInfo(
+  src: Stg.SDataCon,
+  name: FullName,
+  type: TyCon,
+  // constructor index for dataToTag#
+  tag: Int,
+  size: Int
+) : DataConInfo(src, name, type, tag, size) {
+  override fun build(args: Array<Any>): DataCon = builder!!.build(args) as DataCon
+  // TODO: could maybe use OptimizedCallTarget.unsafeCast here
+  override fun unsafeCast(x: Any?): DataCon = CompilerDirectives.castExact(x, klass)
+  override fun tryIs(x: Any?): DataCon? =
+    // TODO: use CompilerDirectives.isExact once its released
+    if (klass!!.isInstance(x)) CompilerDirectives.castExact(x, klass) else null
 
   // TODO: unbox fields, and set field type when we know it can't be a thunk (bang patterns)
   // ghc might not be telling us about bang patterns though :(
-  val klass: Class<DataCon>? = if (size == 0) null else run {
+  private val klass: Class<DataCon>? = if (size == 0) null else run {
     // TODO: better mangling
     fun mangle(x: String) = x.replace("""[\[\]]""".toRegex(), "_")
     val nm = mangle("trufflestg.types.${name.unitId}.${name.module}.${type.name.name}.${name.name}")
@@ -124,17 +201,17 @@ class DataConInfo internal constructor(
       superName = "trufflestg/data/DataCon"
       frameBody(sig, type(DataCon::class))
       method(public and final, +DataConInfo::class, "getInfo") { asm {
-        getstatic(type(nm2), "info", +DataConInfo::class)
+        getstatic(type(nm2), "_info", +DataConInfo::class)
         areturn
       }}
-      field(public and static, +DataConInfo::class, "info")
+      field(public and static, +DataConInfo::class, "_info")
     }.loadClass(nm) { when (it) {
       "trufflestg.data.DataCon" -> DataCon::class.java
       "trufflestg.data.DataConInfo" -> DataConInfo::class.java
       else -> TODO(it)
     }}
 
-    val field = kls.getDeclaredField("info")
+    val field = kls.getDeclaredField("_info")
     field.set(null, this)
     val modifiers = Field::class.java.getDeclaredField("modifiers")
     // TODO: make sure the final from here gets picked up by the jit
@@ -153,12 +230,6 @@ class DataConInfo internal constructor(
       }} as Class<DataFrameBuilder>
     builderKlass.constructors[0].newInstance() as DataFrameBuilder
   }
-
-  // null if size > 0
-  val zeroArgCon: ZeroArgDataCon? = if (size == 0) ZeroArgDataCon(this, tag) else null
-
-  fun build(args: Array<Any>): DataCon =
-    if (size == 0) zeroArgCon!! else builder!!.build(args) as DataCon
 }
 
 

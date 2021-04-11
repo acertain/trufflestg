@@ -83,7 +83,7 @@ fun Stg.Expr.compile(ci: CompileInfo, fd: FrameDescriptor, tc: Boolean): Code = 
         is Stg.AltType.PrimAlt -> when {
           alts.all {  it.con is Stg.AltCon.AltLit && it.binders.isEmpty() } -> {
             val (cs, bs) = alts.map { (it.con as Stg.AltCon.AltLit).x.compile() to it.rhs.compile(ci, fd, tc) }.unzip()
-            CaseAlts.PrimAlts(cs.toTypedArray(), bs.toTypedArray(), default?.rhs?.compile(ci, fd, tc))
+            CaseAlts.PrimAlts(bnd.type, bnd.typeSig, cs.toTypedArray(), bs.toTypedArray(), default?.rhs?.compile(ci, fd, tc))
           }
           else -> TODO("$this")
         }

@@ -5,6 +5,7 @@ import org.fusesource.jansi.Ansi.Attribute
 import org.fusesource.jansi.Ansi.ansi
 import org.fusesource.jansi.AnsiConsole
 import org.graalvm.launcher.AbstractLanguageLauncher
+import org.graalvm.nativeimage.ImageInfo
 import org.graalvm.options.OptionCategory
 import org.graalvm.polyglot.Context
 import org.graalvm.polyglot.PolyglotException
@@ -118,6 +119,13 @@ class Launcher : AbstractLanguageLauncher() {
     }
 
     polyglotOptions["engine.TraceCompilation"] = "true"
+    // TODO: maybe benchmark these?
+    // but my guess is that these don't help much if at all & they make graphs bigger
+    // on native-image EE, they might be neccesary for good calling convention
+    if (!ImageInfo.inImageCode()) {
+      polyglotOptions["engine.ReturnTypeSpeculation"] = "false"
+      polyglotOptions["engine.ArgumentTypeSpeculation"] = "false"
+    }
 
     if (file == null && iterator.hasNext()) file = Paths.get(iterator.next()).toFile()
     val programArgumentsList = arguments.subList(iterator.nextIndex(), arguments.size)

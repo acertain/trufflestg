@@ -1,0 +1,1418 @@
+[
+{
+  "name":"byte[]"
+},
+{
+  "name":"com.oracle.truffle.api.LanguageAccessor$LanguageImpl",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"com.oracle.truffle.api.TruffleLanguage"
+},
+{
+  "name":"com.oracle.truffle.api.debug.impl.DebuggerInstrumentProvider",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"com.oracle.truffle.api.exception.ExceptionAccessor$ExceptionSupportImpl",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"com.oracle.truffle.api.frame.FrameAccessor$FramesImpl",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"com.oracle.truffle.api.instrumentation.InstrumentAccessor$InstrumentImpl",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"com.oracle.truffle.api.instrumentation.InstrumentationHandler"
+},
+{
+  "name":"com.oracle.truffle.api.instrumentation.TruffleInstrument"
+},
+{
+  "name":"com.oracle.truffle.api.interop.DefaultBooleanExportsGen"
+},
+{
+  "name":"com.oracle.truffle.api.interop.DefaultByteExportsGen"
+},
+{
+  "name":"com.oracle.truffle.api.interop.DefaultCharacterExportsGen"
+},
+{
+  "name":"com.oracle.truffle.api.interop.DefaultDoubleExportsGen"
+},
+{
+  "name":"com.oracle.truffle.api.interop.DefaultFloatExportsGen"
+},
+{
+  "name":"com.oracle.truffle.api.interop.DefaultIntegerExportsGen"
+},
+{
+  "name":"com.oracle.truffle.api.interop.DefaultLongExportsGen"
+},
+{
+  "name":"com.oracle.truffle.api.interop.DefaultShortExportsGen"
+},
+{
+  "name":"com.oracle.truffle.api.interop.DefaultStringExportsGen"
+},
+{
+  "name":"com.oracle.truffle.api.interop.InteropAccessor$InteropImpl",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"com.oracle.truffle.api.interop.InteropLibrary"
+},
+{
+  "name":"com.oracle.truffle.api.interop.InteropLibraryGen"
+},
+{
+  "name":"com.oracle.truffle.api.io.IOAccessor$IOSupportImpl",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"com.oracle.truffle.api.library.DefaultExportProvider"
+},
+{
+  "name":"com.oracle.truffle.api.library.DynamicDispatchLibrary"
+},
+{
+  "name":"com.oracle.truffle.api.library.DynamicDispatchLibraryGen"
+},
+{
+  "name":"com.oracle.truffle.api.nodes.DirectCallNode",
+  "allDeclaredFields":true,
+  "fields":[{"name":"callTarget", "allowUnsafeAccess":true}]
+},
+{
+  "name":"com.oracle.truffle.api.nodes.ExecutableNode",
+  "allDeclaredFields":true,
+  "fields":[
+    {"name":"engineRef", "allowUnsafeAccess":true}, 
+    {"name":"referenceCache", "allowUnsafeAccess":true}
+  ]
+},
+{
+  "name":"com.oracle.truffle.api.nodes.IndirectCallNode",
+  "allDeclaredFields":true
+},
+{
+  "name":"com.oracle.truffle.api.nodes.LoopNode",
+  "allDeclaredFields":true
+},
+{
+  "name":"com.oracle.truffle.api.nodes.Node",
+  "allDeclaredFields":true,
+  "fields":[{"name":"parent", "allowUnsafeAccess":true}]
+},
+{
+  "name":"com.oracle.truffle.api.nodes.NodeAccessor$AccessNodes",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"com.oracle.truffle.api.nodes.RootNode",
+  "allDeclaredFields":true,
+  "fields":[
+    {"name":"callTarget", "allowUnsafeAccess":true}, 
+    {"name":"frameDescriptor", "allowUnsafeAccess":true}, 
+    {"name":"instrumentationBits", "allowUnsafeAccess":true}, 
+    {"name":"lock", "allowUnsafeAccess":true}
+  ]
+},
+{
+  "name":"com.oracle.truffle.api.source.SourceAccessor$SourceSupportImpl",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"com.oracle.truffle.polyglot.EngineAccessor$EngineImpl",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"java.io.File",
+  "methods":[{"name":"toPath","parameterTypes":[] }]
+},
+{
+  "name":"java.lang.Boolean"
+},
+{
+  "name":"java.lang.Integer"
+},
+{
+  "name":"java.lang.Long"
+},
+{
+  "name":"java.lang.Object",
+  "allDeclaredFields":true
+},
+{
+  "name":"java.lang.String"
+},
+{
+  "name":"java.lang.Throwable",
+  "fields":[{"name":"cause", "allowUnsafeAccess":true}]
+},
+{
+  "name":"java.math.BigInteger"
+},
+{
+  "name":"java.nio.file.Files",
+  "methods":[{"name":"setPosixFilePermissions","parameterTypes":["java.nio.file.Path","java.util.Set"] }]
+},
+{
+  "name":"java.nio.file.Path"
+},
+{
+  "name":"java.nio.file.attribute.PosixFilePermissions",
+  "methods":[{"name":"fromString","parameterTypes":["java.lang.String"] }]
+},
+{
+  "name":"java.security.MessageDigestSpi"
+},
+{
+  "name":"java.security.SecureRandomParameters"
+},
+{
+  "name":"java.util.Optional"
+},
+{
+  "name":"kotlin.Metadata",
+  "allDeclaredMethods":true
+},
+{
+  "name":"kotlin.Pair"
+},
+{
+  "name":"kotlin.Pair[]"
+},
+{
+  "name":"kotlin.Triple"
+},
+{
+  "name":"kotlin.jvm.internal.DefaultConstructorMarker"
+},
+{
+  "name":"kotlin.reflect.jvm.internal.ReflectionFactoryImpl",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"org.graalvm.compiler.truffle.runtime.OptimizedDirectCallNode",
+  "allDeclaredFields":true,
+  "fields":[
+    {"name":"callCount", "allowUnsafeAccess":true}, 
+    {"name":"exceptionProfile", "allowUnsafeAccess":true}, 
+    {"name":"inliningForced", "allowUnsafeAccess":true}, 
+    {"name":"splitCallTarget", "allowUnsafeAccess":true}, 
+    {"name":"splitDecided", "allowUnsafeAccess":true}
+  ]
+},
+{
+  "name":"org.graalvm.compiler.truffle.runtime.OptimizedIndirectCallNode",
+  "allDeclaredFields":true,
+  "fields":[
+    {"name":"exceptionProfile", "allowUnsafeAccess":true}, 
+    {"name":"seenInInterpreter", "allowUnsafeAccess":true}
+  ]
+},
+{
+  "name":"org.graalvm.compiler.truffle.runtime.OptimizedOSRLoopNode",
+  "allDeclaredFields":true,
+  "fields":[
+    {"name":"baseLoopCount", "allowUnsafeAccess":true}, 
+    {"name":"compilationDisabled", "allowUnsafeAccess":true}, 
+    {"name":"compiledOSRLoop", "allowUnsafeAccess":true}, 
+    {"name":"firstTierBackedgeCounts", "allowUnsafeAccess":true}, 
+    {"name":"osrThreshold", "allowUnsafeAccess":true}, 
+    {"name":"repeatableNode", "allowUnsafeAccess":true}, 
+    {"name":"speculationLog", "allowUnsafeAccess":true}
+  ]
+},
+{
+  "name":"org.graalvm.compiler.truffle.runtime.OptimizedOSRLoopNode$OptimizedDefaultOSRLoopNode",
+  "allDeclaredFields":true
+},
+{
+  "name":"sun.misc.Unsafe",
+  "fields":[{"name":"theUnsafe"}]
+},
+{
+  "name":"sun.security.provider.DRBG",
+  "methods":[{"name":"<init>","parameterTypes":["java.security.SecureRandomParameters"] }]
+},
+{
+  "name":"sun.security.provider.SHA",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"sun.security.provider.SHA2$SHA256",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"trufflestg.frame.BuildFrame",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.frame.BuildFrameNodeGen",
+  "allDeclaredFields":true,
+  "fields":[
+    {"name":"build_cache", "allowUnsafeAccess":true}, 
+    {"name":"state_0_", "allowUnsafeAccess":true}
+  ]
+},
+{
+  "name":"trufflestg.frame.ReadFrame",
+  "allDeclaredFields":true,
+  "fields":[{"name":"slots", "allowUnsafeAccess":true}]
+},
+{
+  "name":"trufflestg.frame.ReadFrameNodeGen",
+  "allDeclaredFields":true,
+  "fields":[
+    {"name":"cached_cache", "allowUnsafeAccess":true}, 
+    {"name":"state_0_", "allowUnsafeAccess":true}
+  ]
+},
+{
+  "name":"trufflestg.jit.Arg",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.jit.Arg$Global",
+  "allDeclaredFields":true,
+  "fields":[
+    {"name":"id", "allowUnsafeAccess":true}, 
+    {"name":"isResolved", "allowUnsafeAccess":true}, 
+    {"name":"module", "allowUnsafeAccess":true}, 
+    {"name":"value", "allowUnsafeAccess":true}
+  ]
+},
+{
+  "name":"trufflestg.jit.Arg$Lit",
+  "allDeclaredFields":true,
+  "fields":[{"name":"x", "allowUnsafeAccess":true}]
+},
+{
+  "name":"trufflestg.jit.Arg$Local",
+  "allDeclaredFields":true,
+  "fields":[
+    {"name":"id", "allowUnsafeAccess":true}, 
+    {"name":"slot", "allowUnsafeAccess":true}
+  ]
+},
+{
+  "name":"trufflestg.jit.Arg$Var",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.jit.Arg[]"
+},
+{
+  "name":"trufflestg.jit.CadenzaRootNode",
+  "allDeclaredFields":true,
+  "fields":[{"name":"mask", "allowUnsafeAccess":true}]
+},
+{
+  "name":"trufflestg.jit.CallWhnf",
+  "allDeclaredFields":true,
+  "fields":[
+    {"name":"argsSize", "allowUnsafeAccess":true}, 
+    {"name":"dispatch", "allowUnsafeAccess":true}, 
+    {"name":"seenThunkClosure", "allowUnsafeAccess":true}, 
+    {"name":"seenThunkValue", "allowUnsafeAccess":true}, 
+    {"name":"tail_call", "allowUnsafeAccess":true}, 
+    {"name":"thunkDispatch", "allowUnsafeAccess":true}, 
+    {"name":"thunkProfile", "allowUnsafeAccess":true}
+  ]
+},
+{
+  "name":"trufflestg.jit.CaseAlts",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.jit.CaseAlts$AlgAlts",
+  "allDeclaredFields":true,
+  "fields":[
+    {"name":"bodies", "allowUnsafeAccess":true}, 
+    {"name":"cons", "allowUnsafeAccess":true}, 
+    {"name":"default", "allowUnsafeAccess":true}, 
+    {"name":"profiles", "allowUnsafeAccess":true}, 
+    {"name":"slots", "allowUnsafeAccess":true}, 
+    {"name":"ty", "allowUnsafeAccess":true}
+  ]
+},
+{
+  "name":"trufflestg.jit.CaseAlts$PolyAlt",
+  "allDeclaredFields":true,
+  "fields":[{"name":"default", "allowUnsafeAccess":true}]
+},
+{
+  "name":"trufflestg.jit.CaseAlts$PrimAlts",
+  "allDeclaredFields":true,
+  "fields":[
+    {"name":"alts", "allowUnsafeAccess":true}, 
+    {"name":"bodies", "allowUnsafeAccess":true}, 
+    {"name":"default", "allowUnsafeAccess":true}, 
+    {"name":"profiles", "allowUnsafeAccess":true}, 
+    {"name":"ty", "allowUnsafeAccess":true}, 
+    {"name":"tySig", "allowUnsafeAccess":true}
+  ]
+},
+{
+  "name":"trufflestg.jit.CaseAlts$UnboxedTuple",
+  "allDeclaredFields":true,
+  "fields":[
+    {"name":"arity", "allowUnsafeAccess":true}, 
+    {"name":"body", "allowUnsafeAccess":true}, 
+    {"name":"fieldSlots", "allowUnsafeAccess":true}, 
+    {"name":"ty", "allowUnsafeAccess":true}
+  ]
+},
+{
+  "name":"trufflestg.jit.ClosureBody",
+  "allDeclaredFields":true,
+  "fields":[{"name":"content", "allowUnsafeAccess":true}]
+},
+{
+  "name":"trufflestg.jit.ClosureRootNode",
+  "allDeclaredFields":true,
+  "fields":[
+    {"name":"argBinders", "allowUnsafeAccess":true}, 
+    {"name":"argPreamble", "allowUnsafeAccess":true}, 
+    {"name":"arity", "allowUnsafeAccess":true}, 
+    {"name":"bloomFilterSlot", "allowUnsafeAccess":true}, 
+    {"name":"body", "allowUnsafeAccess":true}, 
+    {"name":"envPreamble", "allowUnsafeAccess":true}, 
+    {"name":"language", "allowUnsafeAccess":true}, 
+    {"name":"module", "allowUnsafeAccess":true}, 
+    {"name":"parentTopLevel", "allowUnsafeAccess":true}, 
+    {"name":"readFrame", "allowUnsafeAccess":true}, 
+    {"name":"selfTailCallLoopNode", "allowUnsafeAccess":true}, 
+    {"name":"srcSection", "allowUnsafeAccess":true}, 
+    {"name":"tailCallProfile", "allowUnsafeAccess":true}, 
+    {"name":"updFlag", "allowUnsafeAccess":true}
+  ]
+},
+{
+  "name":"trufflestg.jit.Code",
+  "allDeclaredFields":true,
+  "fields":[{"name":"loc", "allowUnsafeAccess":true}]
+},
+{
+  "name":"trufflestg.jit.Code$App",
+  "allDeclaredFields":true,
+  "fields":[
+    {"name":"callWhnf", "allowUnsafeAccess":true}, 
+    {"name":"rands", "allowUnsafeAccess":true}, 
+    {"name":"rator", "allowUnsafeAccess":true}
+  ]
+},
+{
+  "name":"trufflestg.jit.Code$Case",
+  "allDeclaredFields":true,
+  "fields":[
+    {"name":"alts", "allowUnsafeAccess":true}, 
+    {"name":"evaluatedSlot", "allowUnsafeAccess":true}, 
+    {"name":"thing", "allowUnsafeAccess":true}
+  ]
+},
+{
+  "name":"trufflestg.jit.Code$ConApp",
+  "allDeclaredFields":true,
+  "fields":[{"name":"x", "allowUnsafeAccess":true}]
+},
+{
+  "name":"trufflestg.jit.Code$Let",
+  "allDeclaredFields":true,
+  "fields":[
+    {"name":"body", "allowUnsafeAccess":true}, 
+    {"name":"slot", "allowUnsafeAccess":true}, 
+    {"name":"value", "allowUnsafeAccess":true}
+  ]
+},
+{
+  "name":"trufflestg.jit.Code$LetRec",
+  "allDeclaredFields":true,
+  "fields":[
+    {"name":"body", "allowUnsafeAccess":true}, 
+    {"name":"slots", "allowUnsafeAccess":true}, 
+    {"name":"values", "allowUnsafeAccess":true}
+  ]
+},
+{
+  "name":"trufflestg.jit.Code$Lit",
+  "allDeclaredFields":true,
+  "fields":[{"name":"x", "allowUnsafeAccess":true}]
+},
+{
+  "name":"trufflestg.jit.Code[]"
+},
+{
+  "name":"trufflestg.jit.DirectCallerNode",
+  "allDeclaredFields":true,
+  "fields":[
+    {"name":"callNode", "allowUnsafeAccess":true}, 
+    {"name":"callTarget", "allowUnsafeAccess":true}, 
+    {"name":"loop", "allowUnsafeAccess":true}, 
+    {"name":"normalCallProfile", "allowUnsafeAccess":true}, 
+    {"name":"seenTailCall", "allowUnsafeAccess":true}, 
+    {"name":"tailCallProfile", "allowUnsafeAccess":true}, 
+    {"name":"tailCheck", "allowUnsafeAccess":true}, 
+    {"name":"tail_call", "allowUnsafeAccess":true}
+  ]
+},
+{
+  "name":"trufflestg.jit.DispatchCallTarget",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.jit.DispatchCallTargetNodeGen",
+  "allDeclaredFields":true,
+  "fields":[
+    {"name":"callDirect_cache", "allowUnsafeAccess":true}, 
+    {"name":"callIndirect_callNode_", "allowUnsafeAccess":true}, 
+    {"name":"state_0_", "allowUnsafeAccess":true}
+  ]
+},
+{
+  "name":"trufflestg.jit.DispatchCallTargetNodeGen$CallDirectData",
+  "allDeclaredFields":true,
+  "fields":[
+    {"name":"cachedCallTarget_", "allowUnsafeAccess":true}, 
+    {"name":"callNode_", "allowUnsafeAccess":true}, 
+    {"name":"next_", "allowUnsafeAccess":true}
+  ]
+},
+{
+  "name":"trufflestg.jit.DispatchClosure",
+  "allDeclaredFields":true,
+  "fields":[
+    {"name":"argsSize", "allowUnsafeAccess":true}, 
+    {"name":"root", "allowUnsafeAccess":true}, 
+    {"name":"tail_call", "allowUnsafeAccess":true}
+  ]
+},
+{
+  "name":"trufflestg.jit.DispatchClosureNodeGen",
+  "allDeclaredFields":true,
+  "fields":[
+    {"name":"callDirectOverapplied_cache", "allowUnsafeAccess":true}, 
+    {"name":"callDirect_cache", "allowUnsafeAccess":true}, 
+    {"name":"callIndirectOverapplied_cache", "allowUnsafeAccess":true}, 
+    {"name":"callIndirect_callerNode_", "allowUnsafeAccess":true}, 
+    {"name":"state_0_", "allowUnsafeAccess":true}
+  ]
+},
+{
+  "name":"trufflestg.jit.DispatchClosureNodeGen$CallDirectData",
+  "allDeclaredFields":true,
+  "fields":[
+    {"name":"arity_", "allowUnsafeAccess":true}, 
+    {"name":"cachedCallTarget_", "allowUnsafeAccess":true}, 
+    {"name":"cachedKlass_", "allowUnsafeAccess":true}, 
+    {"name":"callerNode_", "allowUnsafeAccess":true}, 
+    {"name":"next_", "allowUnsafeAccess":true}, 
+    {"name":"papSize_", "allowUnsafeAccess":true}
+  ]
+},
+{
+  "name":"trufflestg.jit.DispatchClosureNodeGen$CallDirectOverappliedData",
+  "allDeclaredFields":true,
+  "fields":[
+    {"name":"arity_", "allowUnsafeAccess":true}, 
+    {"name":"cachedCallTarget_", "allowUnsafeAccess":true}, 
+    {"name":"cachedKlass_", "allowUnsafeAccess":true}, 
+    {"name":"callerNode_", "allowUnsafeAccess":true}, 
+    {"name":"dispatch_", "allowUnsafeAccess":true}, 
+    {"name":"next_", "allowUnsafeAccess":true}, 
+    {"name":"papSize_", "allowUnsafeAccess":true}
+  ]
+},
+{
+  "name":"trufflestg.jit.IndirectCallerNode",
+  "allDeclaredFields":true,
+  "fields":[
+    {"name":"callNode", "allowUnsafeAccess":true}, 
+    {"name":"loop", "allowUnsafeAccess":true}, 
+    {"name":"normalCallProfile", "allowUnsafeAccess":true}, 
+    {"name":"tailCallProfile", "allowUnsafeAccess":true}, 
+    {"name":"tailCheck", "allowUnsafeAccess":true}, 
+    {"name":"tail_call", "allowUnsafeAccess":true}
+  ]
+},
+{
+  "name":"trufflestg.jit.MainRootNode",
+  "allDeclaredFields":true,
+  "fields":[
+    {"name":"callWhnf", "allowUnsafeAccess":true}, 
+    {"name":"cl", "allowUnsafeAccess":true}, 
+    {"name":"language", "allowUnsafeAccess":true}
+  ]
+},
+{
+  "name":"trufflestg.jit.Rhs",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.jit.Rhs$ArgCon",
+  "allDeclaredFields":true,
+  "fields":[
+    {"name":"args", "allowUnsafeAccess":true}, 
+    {"name":"con", "allowUnsafeAccess":true}
+  ]
+},
+{
+  "name":"trufflestg.jit.Rhs$RhsClosure",
+  "allDeclaredFields":true,
+  "fields":[
+    {"name":"arity", "allowUnsafeAccess":true}, 
+    {"name":"builder", "allowUnsafeAccess":true}, 
+    {"name":"callTarget", "allowUnsafeAccess":true}, 
+    {"name":"captures", "allowUnsafeAccess":true}, 
+    {"name":"updFlag", "allowUnsafeAccess":true}
+  ]
+},
+{
+  "name":"trufflestg.jit.Rhs[]"
+},
+{
+  "name":"trufflestg.jit.SelfTailCallLoop",
+  "allDeclaredFields":true,
+  "fields":[
+    {"name":"body", "allowUnsafeAccess":true}, 
+    {"name":"closureRoot", "allowUnsafeAccess":true}, 
+    {"name":"loopNode", "allowUnsafeAccess":true}, 
+    {"name":"repeatingNode", "allowUnsafeAccess":true}
+  ]
+},
+{
+  "name":"trufflestg.jit.SelfTailCallRepeatingNode",
+  "allDeclaredFields":true,
+  "fields":[
+    {"name":"body", "allowUnsafeAccess":true}, 
+    {"name":"closureRoot", "allowUnsafeAccess":true}
+  ]
+},
+{
+  "name":"trufflestg.jit.StgFCall",
+  "allDeclaredFields":true,
+  "fields":[
+    {"name":"args", "allowUnsafeAccess":true}, 
+    {"name":"name", "allowUnsafeAccess":true}, 
+    {"name":"opNode", "allowUnsafeAccess":true}, 
+    {"name":"x", "allowUnsafeAccess":true}
+  ]
+},
+{
+  "name":"trufflestg.jit.StgFCallKt$$special$$inlined$wrap1$1$1",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.jit.StgFCallKt$$special$$inlined$wrap1Boundary$1$1",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.jit.StgFCallKt$$special$$inlined$wrap2$1$1",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.jit.StgFCallKt$$special$$inlined$wrap2$2$1",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.jit.StgFCallKt$$special$$inlined$wrap2$3$1",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.jit.StgFCallKt$$special$$inlined$wrap2$4$1",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.jit.StgFCallKt$$special$$inlined$wrap2$5$1",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.jit.StgFCallKt$$special$$inlined$wrap2$6$1",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.jit.StgFCallKt$$special$$inlined$wrap2$7$1",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.jit.StgFCallKt$$special$$inlined$wrap3Boundary$3$1",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.jit.StgFCallKt$$special$$inlined$wrap4$2$1",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.jit.StgFCallKt$$special$$inlined$wrap4Boundary$1$1",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.jit.StgFCallKt$primFCalls$8$1",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.jit.StgPrim",
+  "allDeclaredFields":true,
+  "fields":[
+    {"name":"args", "allowUnsafeAccess":true}, 
+    {"name":"op", "allowUnsafeAccess":true}, 
+    {"name":"opNode", "allowUnsafeAccess":true}, 
+    {"name":"type", "allowUnsafeAccess":true}
+  ]
+},
+{
+  "name":"trufflestg.jit.StgPrimKt$$special$$inlined$wrap1$1$1",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.jit.StgPrimKt$$special$$inlined$wrap1$10$1",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.jit.StgPrimKt$$special$$inlined$wrap1$11$1",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.jit.StgPrimKt$$special$$inlined$wrap1$13$1",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.jit.StgPrimKt$$special$$inlined$wrap1$2$1",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.jit.StgPrimKt$$special$$inlined$wrap1$3$1",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.jit.StgPrimKt$$special$$inlined$wrap1$4$1",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.jit.StgPrimKt$$special$$inlined$wrap1$5$1",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.jit.StgPrimKt$$special$$inlined$wrap1$6$1",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.jit.StgPrimKt$$special$$inlined$wrap1$7$1",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.jit.StgPrimKt$$special$$inlined$wrap1$8$1",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.jit.StgPrimKt$$special$$inlined$wrap1$9$1",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.jit.StgPrimKt$$special$$inlined$wrap2$1$1",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.jit.StgPrimKt$$special$$inlined$wrap2$10$1",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.jit.StgPrimKt$$special$$inlined$wrap2$12$1",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.jit.StgPrimKt$$special$$inlined$wrap2$13$1",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.jit.StgPrimKt$$special$$inlined$wrap2$14$1",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.jit.StgPrimKt$$special$$inlined$wrap2$15$1",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.jit.StgPrimKt$$special$$inlined$wrap2$16$1",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.jit.StgPrimKt$$special$$inlined$wrap2$17$1",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.jit.StgPrimKt$$special$$inlined$wrap2$18$1",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.jit.StgPrimKt$$special$$inlined$wrap2$2$1",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.jit.StgPrimKt$$special$$inlined$wrap2$21$1",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.jit.StgPrimKt$$special$$inlined$wrap2$23$1",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.jit.StgPrimKt$$special$$inlined$wrap2$24$1",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.jit.StgPrimKt$$special$$inlined$wrap2$25$1",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.jit.StgPrimKt$$special$$inlined$wrap2$26$1",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.jit.StgPrimKt$$special$$inlined$wrap2$27$1",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.jit.StgPrimKt$$special$$inlined$wrap2$3$1",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.jit.StgPrimKt$$special$$inlined$wrap2$31$1",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.jit.StgPrimKt$$special$$inlined$wrap2$32$1",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.jit.StgPrimKt$$special$$inlined$wrap2$33$1",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.jit.StgPrimKt$$special$$inlined$wrap2$34$1",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.jit.StgPrimKt$$special$$inlined$wrap2$4$1",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.jit.StgPrimKt$$special$$inlined$wrap2$5$1",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.jit.StgPrimKt$$special$$inlined$wrap2$6$1",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.jit.StgPrimKt$$special$$inlined$wrap2$7$1",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.jit.StgPrimKt$$special$$inlined$wrap2$8$1",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.jit.StgPrimKt$$special$$inlined$wrap2$9$1",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.jit.StgPrimKt$$special$$inlined$wrap3$1$1",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.jit.StgPrimKt$$special$$inlined$wrap3$10$1",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.jit.StgPrimKt$$special$$inlined$wrap3$11$1",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.jit.StgPrimKt$$special$$inlined$wrap3$2$1",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.jit.StgPrimKt$$special$$inlined$wrap3$3$1",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.jit.StgPrimKt$$special$$inlined$wrap3$4$1",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.jit.StgPrimKt$$special$$inlined$wrap3$5$1",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.jit.StgPrimKt$$special$$inlined$wrap3$6$1",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.jit.StgPrimKt$$special$$inlined$wrap3$7$1",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.jit.StgPrimKt$$special$$inlined$wrap3$8$1",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.jit.StgPrimKt$$special$$inlined$wrap3$9$1",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.jit.StgPrimKt$$special$$inlined$wrap4$1$1",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.jit.StgPrimKt$$special$$inlined$wrap4$2$1",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.jit.StgPrimKt$$special$$inlined$wrap4$3$1",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.jit.StgPrimKt$$special$$inlined$wrap4$4$1",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.jit.StgPrimKt$primOps$1$1",
+  "allDeclaredFields":true,
+  "fields":[
+    {"name":"callWhnf1", "allowUnsafeAccess":true}, 
+    {"name":"callWhnf2", "allowUnsafeAccess":true}
+  ]
+},
+{
+  "name":"trufflestg.jit.StgPrimKt$primOps$2$1",
+  "allDeclaredFields":true,
+  "fields":[{"name":"callWhnf", "allowUnsafeAccess":true}]
+},
+{
+  "name":"trufflestg.jit.StgPrimKt$primOps$3$1",
+  "allDeclaredFields":true,
+  "fields":[{"name":"callWhnf", "allowUnsafeAccess":true}]
+},
+{
+  "name":"trufflestg.jit.StgPrimKt$primOps$46$1",
+  "allDeclaredFields":true,
+  "fields":[{"name":"cons", "allowUnsafeAccess":true}]
+},
+{
+  "name":"trufflestg.jit.StgPrimKt$primOps$47$1",
+  "allDeclaredFields":true,
+  "fields":[{"name":"type", "allowUnsafeAccess":true}]
+},
+{
+  "name":"trufflestg.jit.StgPrimOp",
+  "allDeclaredFields":true,
+  "fields":[{"name":"arity", "allowUnsafeAccess":true}]
+},
+{
+  "name":"trufflestg.jit.StgPrimOp1",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.jit.StgPrimOp2",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.jit.StgPrimOp3",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.jit.StgPrimOp4",
+  "allDeclaredFields":true
+},
+{
+  "name":"trufflestg.jit.TailCallLoop",
+  "allDeclaredFields":true,
+  "fields":[
+    {"name":"loopNode", "allowUnsafeAccess":true}, 
+    {"name":"repeatingNode", "allowUnsafeAccess":true}
+  ]
+},
+{
+  "name":"trufflestg.jit.TailCallRepeatingNode",
+  "allDeclaredFields":true,
+  "fields":[
+    {"name":"argsSlot", "allowUnsafeAccess":true}, 
+    {"name":"descriptor", "allowUnsafeAccess":true}, 
+    {"name":"dispatchNode", "allowUnsafeAccess":true}, 
+    {"name":"functionSlot", "allowUnsafeAccess":true}, 
+    {"name":"resultSlot", "allowUnsafeAccess":true}
+  ]
+},
+{
+  "name":"trufflestg.jit.TailCheck",
+  "allDeclaredFields":true,
+  "fields":[
+    {"name":"root", "allowUnsafeAccess":true}, 
+    {"name":"tailCallProfile", "allowUnsafeAccess":true}, 
+    {"name":"unrollProfile", "allowUnsafeAccess":true}
+  ]
+},
+{
+  "name":"trufflestg.stg.Stg"
+},
+{
+  "name":"trufflestg.stg.Stg$Alt",
+  "methods":[{"name":"<init>","parameterTypes":["trufflestg.stg.Stg$AltCon","trufflestg.stg.Stg$SBinder[]","trufflestg.stg.Stg$Expr"] }]
+},
+{
+  "name":"trufflestg.stg.Stg$AltCon"
+},
+{
+  "name":"trufflestg.stg.Stg$AltCon$AltDataCon",
+  "methods":[{"name":"<init>","parameterTypes":["trufflestg.stg.Stg$Unique","kotlin.jvm.internal.DefaultConstructorMarker"] }]
+},
+{
+  "name":"trufflestg.stg.Stg$AltCon$AltDefault",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"trufflestg.stg.Stg$AltCon$AltLit",
+  "methods":[{"name":"<init>","parameterTypes":["trufflestg.stg.Stg$Lit"] }]
+},
+{
+  "name":"trufflestg.stg.Stg$AltType"
+},
+{
+  "name":"trufflestg.stg.Stg$AltType$AlgAlt",
+  "methods":[{"name":"<init>","parameterTypes":["trufflestg.stg.Stg$Unique","kotlin.jvm.internal.DefaultConstructorMarker"] }]
+},
+{
+  "name":"trufflestg.stg.Stg$AltType$MultiValAlt",
+  "methods":[{"name":"<init>","parameterTypes":["int"] }]
+},
+{
+  "name":"trufflestg.stg.Stg$AltType$PolyAlt",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"trufflestg.stg.Stg$AltType$PrimAlt",
+  "methods":[{"name":"<init>","parameterTypes":["trufflestg.stg.Stg$PrimRep"] }]
+},
+{
+  "name":"trufflestg.stg.Stg$Alt[]"
+},
+{
+  "name":"trufflestg.stg.Stg$Arg"
+},
+{
+  "name":"trufflestg.stg.Stg$Arg$StgLitArg",
+  "methods":[{"name":"<init>","parameterTypes":["trufflestg.stg.Stg$Lit"] }]
+},
+{
+  "name":"trufflestg.stg.Stg$Arg$StgVarArg",
+  "methods":[{"name":"<init>","parameterTypes":["trufflestg.stg.Stg$Unique","kotlin.jvm.internal.DefaultConstructorMarker"] }]
+},
+{
+  "name":"trufflestg.stg.Stg$Arg[]"
+},
+{
+  "name":"trufflestg.stg.Stg$BinderId",
+  "allDeclaredMethods":true,
+  "allPublicMethods":true
+},
+{
+  "name":"trufflestg.stg.Stg$BinderId[]"
+},
+{
+  "name":"trufflestg.stg.Stg$Binding"
+},
+{
+  "name":"trufflestg.stg.Stg$Binding$StgNonRec",
+  "methods":[{"name":"<init>","parameterTypes":["trufflestg.stg.Stg$SBinder","trufflestg.stg.Stg$Rhs"] }]
+},
+{
+  "name":"trufflestg.stg.Stg$Binding$StgRec",
+  "methods":[{"name":"<init>","parameterTypes":["kotlin.Pair[]"] }]
+},
+{
+  "name":"trufflestg.stg.Stg$BufSpan",
+  "methods":[{"name":"<init>","parameterTypes":["int","int"] }]
+},
+{
+  "name":"trufflestg.stg.Stg$CCallConv"
+},
+{
+  "name":"trufflestg.stg.Stg$CCallTarget"
+},
+{
+  "name":"trufflestg.stg.Stg$CCallTarget$DynamicTarget"
+},
+{
+  "name":"trufflestg.stg.Stg$CCallTarget$StaticTarget",
+  "methods":[{"name":"<init>","parameterTypes":["trufflestg.stg.Stg$SourceText","java.lang.String","java.util.Optional","boolean"] }]
+},
+{
+  "name":"trufflestg.stg.Stg$DataConId",
+  "allDeclaredMethods":true,
+  "allPublicMethods":true
+},
+{
+  "name":"trufflestg.stg.Stg$DataConRep"
+},
+{
+  "name":"trufflestg.stg.Stg$DataConRep$AlgDataCon",
+  "methods":[{"name":"<init>","parameterTypes":["trufflestg.stg.Stg$PrimRep[]"] }]
+},
+{
+  "name":"trufflestg.stg.Stg$DataConRep$UnboxedTupleCon",
+  "methods":[{"name":"<init>","parameterTypes":["int"] }]
+},
+{
+  "name":"trufflestg.stg.Stg$Expr"
+},
+{
+  "name":"trufflestg.stg.Stg$Expr$StgApp",
+  "methods":[{"name":"<init>","parameterTypes":["trufflestg.stg.Stg$Unique","trufflestg.stg.Stg$Arg[]","trufflestg.stg.Stg$Type","kotlin.Triple","kotlin.jvm.internal.DefaultConstructorMarker"] }]
+},
+{
+  "name":"trufflestg.stg.Stg$Expr$StgCase",
+  "methods":[{"name":"<init>","parameterTypes":["trufflestg.stg.Stg$Expr","trufflestg.stg.Stg$SBinder","trufflestg.stg.Stg$AltType","trufflestg.stg.Stg$Alt[]"] }]
+},
+{
+  "name":"trufflestg.stg.Stg$Expr$StgConApp",
+  "methods":[{"name":"<init>","parameterTypes":["trufflestg.stg.Stg$Unique","trufflestg.stg.Stg$Arg[]","trufflestg.stg.Stg$Type[]","kotlin.jvm.internal.DefaultConstructorMarker"] }]
+},
+{
+  "name":"trufflestg.stg.Stg$Expr$StgLet",
+  "methods":[{"name":"<init>","parameterTypes":["trufflestg.stg.Stg$Binding","trufflestg.stg.Stg$Expr"] }]
+},
+{
+  "name":"trufflestg.stg.Stg$Expr$StgLetNoEscape",
+  "methods":[{"name":"<init>","parameterTypes":["trufflestg.stg.Stg$Binding","trufflestg.stg.Stg$Expr"] }]
+},
+{
+  "name":"trufflestg.stg.Stg$Expr$StgLit",
+  "methods":[{"name":"<init>","parameterTypes":["trufflestg.stg.Stg$Lit"] }]
+},
+{
+  "name":"trufflestg.stg.Stg$Expr$StgOpApp",
+  "methods":[{"name":"<init>","parameterTypes":["trufflestg.stg.Stg$StgOp","trufflestg.stg.Stg$Arg[]","trufflestg.stg.Stg$Type","java.util.Optional"] }]
+},
+{
+  "name":"trufflestg.stg.Stg$Expr$StgTick"
+},
+{
+  "name":"trufflestg.stg.Stg$ForeignCall",
+  "methods":[{"name":"<init>","parameterTypes":["trufflestg.stg.Stg$CCallTarget","trufflestg.stg.Stg$CCallConv","trufflestg.stg.Stg$Safety"] }]
+},
+{
+  "name":"trufflestg.stg.Stg$ForeignSrcLang"
+},
+{
+  "name":"trufflestg.stg.Stg$ForeignStubs"
+},
+{
+  "name":"trufflestg.stg.Stg$ForeignStubs$NoStubs"
+},
+{
+  "name":"trufflestg.stg.Stg$ForeignStubs$YesForeignStubs",
+  "methods":[{"name":"<init>","parameterTypes":["java.lang.String","java.lang.String"] }]
+},
+{
+  "name":"trufflestg.stg.Stg$IdDetails"
+},
+{
+  "name":"trufflestg.stg.Stg$IdDetails$ClassOpId",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"trufflestg.stg.Stg$IdDetails$CoVarId"
+},
+{
+  "name":"trufflestg.stg.Stg$IdDetails$DFunId",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"trufflestg.stg.Stg$IdDetails$DataConWorkId",
+  "methods":[{"name":"<init>","parameterTypes":["trufflestg.stg.Stg$Unique","kotlin.jvm.internal.DefaultConstructorMarker"] }]
+},
+{
+  "name":"trufflestg.stg.Stg$IdDetails$DataConWrapId",
+  "methods":[{"name":"<init>","parameterTypes":["trufflestg.stg.Stg$Unique","kotlin.jvm.internal.DefaultConstructorMarker"] }]
+},
+{
+  "name":"trufflestg.stg.Stg$IdDetails$FCallId"
+},
+{
+  "name":"trufflestg.stg.Stg$IdDetails$FExportedId"
+},
+{
+  "name":"trufflestg.stg.Stg$IdDetails$JoinId",
+  "methods":[{"name":"<init>","parameterTypes":["int"] }]
+},
+{
+  "name":"trufflestg.stg.Stg$IdDetails$PrimOpId"
+},
+{
+  "name":"trufflestg.stg.Stg$IdDetails$RecSelId",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"trufflestg.stg.Stg$IdDetails$TickBoxOpId"
+},
+{
+  "name":"trufflestg.stg.Stg$IdDetails$VanillaId",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"trufflestg.stg.Stg$LabelSpec"
+},
+{
+  "name":"trufflestg.stg.Stg$LabelSpec$DataLabel"
+},
+{
+  "name":"trufflestg.stg.Stg$LabelSpec$FunctionLabel",
+  "methods":[{"name":"<init>","parameterTypes":["java.util.Optional"] }]
+},
+{
+  "name":"trufflestg.stg.Stg$Lit"
+},
+{
+  "name":"trufflestg.stg.Stg$Lit$LitChar",
+  "methods":[{"name":"<init>","parameterTypes":["java.lang.String"] }]
+},
+{
+  "name":"trufflestg.stg.Stg$Lit$LitDouble",
+  "methods":[{"name":"<init>","parameterTypes":["trufflestg.stg.Stg$Rational"] }]
+},
+{
+  "name":"trufflestg.stg.Stg$Lit$LitFloat",
+  "methods":[{"name":"<init>","parameterTypes":["trufflestg.stg.Stg$Rational"] }]
+},
+{
+  "name":"trufflestg.stg.Stg$Lit$LitLabel",
+  "methods":[{"name":"<init>","parameterTypes":["byte[]","trufflestg.stg.Stg$LabelSpec"] }]
+},
+{
+  "name":"trufflestg.stg.Stg$Lit$LitNullAddr",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"trufflestg.stg.Stg$Lit$LitNumber",
+  "methods":[{"name":"<init>","parameterTypes":["trufflestg.stg.Stg$LitNumType","java.math.BigInteger"] }]
+},
+{
+  "name":"trufflestg.stg.Stg$Lit$LitString",
+  "methods":[{"name":"<init>","parameterTypes":["byte[]"] }]
+},
+{
+  "name":"trufflestg.stg.Stg$LitNumType"
+},
+{
+  "name":"trufflestg.stg.Stg$Module",
+  "methods":[{"name":"<init>","parameterTypes":["java.lang.String","java.lang.String","java.lang.String","java.util.Optional","trufflestg.stg.Stg$ForeignStubs","boolean","kotlin.Pair[]","kotlin.Pair[]","kotlin.Pair[]","trufflestg.stg.Stg$TopBinding[]","kotlin.Pair[]","kotlin.jvm.internal.DefaultConstructorMarker"] }]
+},
+{
+  "name":"trufflestg.stg.Stg$ModuleName",
+  "allDeclaredMethods":true,
+  "allPublicMethods":true
+},
+{
+  "name":"trufflestg.stg.Stg$ModuleName[]"
+},
+{
+  "name":"trufflestg.stg.Stg$PrimRep"
+},
+{
+  "name":"trufflestg.stg.Stg$PrimRep$AddrRep",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"trufflestg.stg.Stg$PrimRep$DoubleRep",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"trufflestg.stg.Stg$PrimRep$FloatRep",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"trufflestg.stg.Stg$PrimRep$Int16Rep"
+},
+{
+  "name":"trufflestg.stg.Stg$PrimRep$Int32Rep"
+},
+{
+  "name":"trufflestg.stg.Stg$PrimRep$Int64Rep"
+},
+{
+  "name":"trufflestg.stg.Stg$PrimRep$Int8Rep"
+},
+{
+  "name":"trufflestg.stg.Stg$PrimRep$IntRep",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"trufflestg.stg.Stg$PrimRep$LiftedRep",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"trufflestg.stg.Stg$PrimRep$UnliftedRep",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"trufflestg.stg.Stg$PrimRep$VecRep"
+},
+{
+  "name":"trufflestg.stg.Stg$PrimRep$VoidRep",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"trufflestg.stg.Stg$PrimRep$Word16Rep"
+},
+{
+  "name":"trufflestg.stg.Stg$PrimRep$Word32Rep"
+},
+{
+  "name":"trufflestg.stg.Stg$PrimRep$Word64Rep"
+},
+{
+  "name":"trufflestg.stg.Stg$PrimRep$Word8Rep"
+},
+{
+  "name":"trufflestg.stg.Stg$PrimRep$WordRep",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"trufflestg.stg.Stg$PrimRep[]"
+},
+{
+  "name":"trufflestg.stg.Stg$Rational"
+},
+{
+  "name":"trufflestg.stg.Stg$RealSrcSpan",
+  "methods":[{"name":"<init>","parameterTypes":["java.lang.String","int","int","int","int"] }]
+},
+{
+  "name":"trufflestg.stg.Stg$Rhs"
+},
+{
+  "name":"trufflestg.stg.Stg$Rhs$StgRhsClosure",
+  "methods":[{"name":"<init>","parameterTypes":["trufflestg.stg.Stg$BinderId[]","trufflestg.stg.Stg$UpdateFlag","trufflestg.stg.Stg$SBinder[]","trufflestg.stg.Stg$Expr"] }]
+},
+{
+  "name":"trufflestg.stg.Stg$Rhs$StgRhsCon",
+  "methods":[{"name":"<init>","parameterTypes":["trufflestg.stg.Stg$Unique","trufflestg.stg.Stg$Arg[]","kotlin.jvm.internal.DefaultConstructorMarker"] }]
+},
+{
+  "name":"trufflestg.stg.Stg$SBinder",
+  "methods":[{"name":"<init>","parameterTypes":["java.lang.String","trufflestg.stg.Stg$Unique","trufflestg.stg.Stg$Type","java.lang.String","trufflestg.stg.Stg$Scope","trufflestg.stg.Stg$IdDetails","java.lang.String","trufflestg.stg.Stg$SrcSpan","kotlin.jvm.internal.DefaultConstructorMarker"] }]
+},
+{
+  "name":"trufflestg.stg.Stg$SBinder[]"
+},
+{
+  "name":"trufflestg.stg.Stg$SDataCon",
+  "methods":[{"name":"<init>","parameterTypes":["java.lang.String","trufflestg.stg.Stg$Unique","trufflestg.stg.Stg$DataConRep","trufflestg.stg.Stg$SBinder","trufflestg.stg.Stg$SrcSpan","kotlin.jvm.internal.DefaultConstructorMarker"] }]
+},
+{
+  "name":"trufflestg.stg.Stg$SDataCon[]"
+},
+{
+  "name":"trufflestg.stg.Stg$STyCon",
+  "methods":[{"name":"<init>","parameterTypes":["java.lang.String","trufflestg.stg.Stg$Unique","trufflestg.stg.Stg$SDataCon[]","trufflestg.stg.Stg$SrcSpan","kotlin.jvm.internal.DefaultConstructorMarker"] }]
+},
+{
+  "name":"trufflestg.stg.Stg$STyCon[]"
+},
+{
+  "name":"trufflestg.stg.Stg$Safety"
+},
+{
+  "name":"trufflestg.stg.Stg$Scope"
+},
+{
+  "name":"trufflestg.stg.Stg$SourceText"
+},
+{
+  "name":"trufflestg.stg.Stg$SourceText$HasSourceText"
+},
+{
+  "name":"trufflestg.stg.Stg$SourceText$NoSourceText",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"trufflestg.stg.Stg$SrcSpan"
+},
+{
+  "name":"trufflestg.stg.Stg$SrcSpan$ARealSrcSpan",
+  "methods":[{"name":"<init>","parameterTypes":["trufflestg.stg.Stg$RealSrcSpan","java.util.Optional"] }]
+},
+{
+  "name":"trufflestg.stg.Stg$SrcSpan$UnhelpfulSpan",
+  "methods":[{"name":"<init>","parameterTypes":["java.lang.String"] }]
+},
+{
+  "name":"trufflestg.stg.Stg$StgOp"
+},
+{
+  "name":"trufflestg.stg.Stg$StgOp$StgFCallOp",
+  "methods":[{"name":"<init>","parameterTypes":["trufflestg.stg.Stg$ForeignCall"] }]
+},
+{
+  "name":"trufflestg.stg.Stg$StgOp$StgPrimCallOp"
+},
+{
+  "name":"trufflestg.stg.Stg$StgOp$StgPrimOp",
+  "methods":[{"name":"<init>","parameterTypes":["java.lang.String"] }]
+},
+{
+  "name":"trufflestg.stg.Stg$TopBinding"
+},
+{
+  "name":"trufflestg.stg.Stg$TopBinding$StgTopLifted",
+  "methods":[{"name":"<init>","parameterTypes":["trufflestg.stg.Stg$Binding"] }]
+},
+{
+  "name":"trufflestg.stg.Stg$TopBinding$StgTopStringLit",
+  "methods":[{"name":"<init>","parameterTypes":["trufflestg.stg.Stg$SBinder","byte[]"] }]
+},
+{
+  "name":"trufflestg.stg.Stg$TopBinding[]"
+},
+{
+  "name":"trufflestg.stg.Stg$TyConId",
+  "allDeclaredMethods":true,
+  "allPublicMethods":true
+},
+{
+  "name":"trufflestg.stg.Stg$Type"
+},
+{
+  "name":"trufflestg.stg.Stg$Type$PolymorphicRep",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"trufflestg.stg.Stg$Type$SingleValue",
+  "methods":[{"name":"<init>","parameterTypes":["trufflestg.stg.Stg$PrimRep"] }]
+},
+{
+  "name":"trufflestg.stg.Stg$Type$UnboxedTuple",
+  "methods":[{"name":"<init>","parameterTypes":["trufflestg.stg.Stg$PrimRep[]"] }]
+},
+{
+  "name":"trufflestg.stg.Stg$Type[]"
+},
+{
+  "name":"trufflestg.stg.Stg$Unique",
+  "methods":[{"name":"<init>","parameterTypes":["java.lang.String","long"] }]
+},
+{
+  "name":"trufflestg.stg.Stg$UnitId",
+  "allDeclaredMethods":true,
+  "allPublicMethods":true
+},
+{
+  "name":"trufflestg.stg.Stg$UpdateFlag"
+}
+]

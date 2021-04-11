@@ -95,8 +95,9 @@ class IndirectCallerNode(val tail_call: Boolean) : Node() {
 
   fun call(mask: Long, callTarget: RootCallTarget, args: Array<Any>): Any {
     return if (tail_call) {
-      tailCheck.tailCheck(mask, callTarget, args)
-      CallUtils.callIndirect(callNode, callTarget, args)
+      throw TailCallException(callTarget, args)
+//      tailCheck.tailCheck(mask, callTarget, args)
+//      CallUtils.callIndirect(callNode, callTarget, args)
     } else {
       try {
         args[0] = 0L
@@ -156,13 +157,14 @@ class TailCallRepeatingNode(val descriptor: FrameDescriptor) : Node(), Repeating
   }
 
   private fun getNextFunction(frame: VirtualFrame): CallTarget {
-    val result = FrameUtil.getObjectSafe(frame, functionSlot) as CallTarget
+    val result = (FrameUtil.getObjectSafe(frame, functionSlot) as? CallTarget)!!
+    // TODO: use Frame.clear
     frame.setObject(functionSlot, null)
     return result
   }
 
   private fun getNextArgs(frame: VirtualFrame): Array<Any> {
-    val result = FrameUtil.getObjectSafe(frame, argsSlot) as Array<Any>
+    val result = (FrameUtil.getObjectSafe(frame, argsSlot) as? Array<Any>)!!
     frame.setObject(argsSlot, null)
     return result
   }
@@ -247,10 +249,10 @@ fun createOptimizedLoopNode(repeatingNode: RepeatingNode, readFrameSlots: Array<
 //  if (!OzLanguage.ON_GRAAL) {
 //    return loopNode
 //  }
-  val m = createOSRLoop
-  if (m != null) {
-    return m.invoke(null, repeatingNode, 3, 100_000, readFrameSlots, writtenFrameSlots) as LoopNode
-//    } catch (e: Exception) {}
-  }
+//  val m = createOSRLoop
+//  if (m != null) {
+//    return m.invoke(null, repeatingNode, 3, 100_000, readFrameSlots, writtenFrameSlots) as LoopNode
+////    } catch (e: Exception) {}
+//  }
   return loopNode
 }

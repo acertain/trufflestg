@@ -32,8 +32,8 @@ plugins {
   idea
   id("org.jetbrains.dokka") version "0.9.17"
   id("org.ajoberstar.git-publish") version "2.1.1"
-  kotlin("jvm") version "1.4.30"
-  kotlin("kapt") version "1.4.30"
+  kotlin("jvm") version "1.4.32"
+  kotlin("kapt") version "1.4.32"
 }
 
 val compiler: Configuration by configurations.creating
@@ -54,8 +54,8 @@ dependencies {
   kapt("org.graalvm.truffle:truffle-api:$graalVersion")
   kapt("org.graalvm.truffle:truffle-dsl-processor:$graalVersion")
   testImplementation("org.junit.jupiter:junit-jupiter:5.5.2")
-  implementation("org.jetbrains.kotlin:kotlin-script-runtime:1.4.30")
-  implementation("org.jetbrains.kotlin:kotlin-reflect:1.4.30")
+  implementation("org.jetbrains.kotlin:kotlin-script-runtime:1.4.32")
+  implementation("org.jetbrains.kotlin:kotlin-reflect:1.4.32")
 }
 
 java {
@@ -243,7 +243,10 @@ tasks.withType<ProcessResources> {
   from("etc/native-image.properties") {
     // TODO: expand more properties
     expand(project.properties)
-    rename("native-image.properties","languages/trufflestg/native-image.properties")
+    rename("native-image.properties","META-INF/native-image/trufflestg/native-image.properties")
+  }
+  from(fileTree("etc/native-image/")) {
+    into("META-INF/native-image/trufflestg/")
   }
   from(files("etc/symlinks","etc/permissions")) {
     rename("(.*)","META-INF/$1")

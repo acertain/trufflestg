@@ -205,3 +205,4 @@ abstract class DispatchClosure(@JvmField val argsSize: Int, @JvmField val tail_c
       (o as Closure).javaClass
     } else null
 }
+

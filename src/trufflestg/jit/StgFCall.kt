@@ -1,5 +1,6 @@
 package trufflestg.jit
 
+import com.oracle.truffle.api.CompilerDirectives
 import com.oracle.truffle.api.Truffle
 import com.oracle.truffle.api.TruffleLanguage
 import trufflestg.data.*
@@ -8,6 +9,7 @@ import trufflestg.stg.Stg
 import com.oracle.truffle.api.frame.VirtualFrame
 import trufflestg.Language
 import trufflestg.array_utils.*
+import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 
 object GlobalStore {
@@ -36,13 +38,18 @@ class StgFCall(
   }
 }
 
-fun ByteArray.asCString(): String = String(copyOfRange(0, indexOf(0x00)))
 
 var md5: MessageDigest? = null
 
+@CompilerDirectives.TruffleBoundary
+fun ByteArray.asCString(): String = String(copyOfRange(0, indexOf(0x00)))
+
+@CompilerDirectives.TruffleBoundary
+fun getMD5(): MessageDigest = MessageDigest.getInstance("MD5")
+
 val primFCalls: Map<String, () -> StgPrimOp> = mapOf(
   // TODO: do something safer! (use x to store MessageDigest object?)
-  "__hsbase_MD5Init" to wrap2 { x: StgAddr, y: VoidInh ->
+  "__hsbase_MD5Init" to wrap2Boundary { x: StgAddr, y: VoidInh ->
     if (md5 != null) panic("")
     md5 = MessageDigest.getInstance("MD5")
     y
@@ -52,13 +59,13 @@ val primFCalls: Map<String, () -> StgPrimOp> = mapOf(
     md5!!.update(c)
     v
   },
-  "__hsbase_MD5Final" to wrap3 { out: StgAddr, _: StgAddr, v: VoidInh ->
+  "__hsbase_MD5Final" to wrap3Boundary { out: StgAddr, _: StgAddr, v: VoidInh ->
     out.arr.write(out.offset, md5!!.digest())
     md5 = null
     v
   },
 
-  "errorBelch2" to wrap3 { x: StgAddr, y: StgAddr, v: VoidInh ->
+  "errorBelch2" to wrap3Boundary { x: StgAddr, y: StgAddr, v: VoidInh ->
     // TODO: this is supposed to be printf
     System.err.println("errorBelch2: ${x.asArray().asCString()} ${y.asArray().asCString()}")
     v
@@ -79,14 +86,15 @@ val primFCalls: Map<String, () -> StgPrimOp> = mapOf(
   "fdReady" to { object : StgPrimOp(5) {
     // FIXME: implement this, might need to use JNI
     override fun run(frame: VirtualFrame, args: Array<Any>): Any {
-      if ((args[0] as StgInt).x == 1L) return UnboxedTuple(arrayOf(StgInt(1L)))
-      panic("todo: fdReady")
+      val fd = (args[0] as StgInt).x
+      if (fd == 1L || fd == 0L) return UnboxedTuple(arrayOf(StgInt(1L)))
+      panic("todo: fdReady ${args[0]}")
     }
   } },
 
   "rtsSupportsBoundThreads" to wrap1 { _: VoidInh -> UnboxedTuple(arrayOf(StgInt(0L))) },
 
-  "ghczuwrapperZC20ZCbaseZCSystemziPosixziInternalsZCwrite" to wrap4 { x: StgInt, y: StgAddr, z: StgWord, v: VoidInh ->
+  "ghczuwrapperZC20ZCbaseZCSystemziPosixziInternalsZCwrite" to wrap4Boundary { x: StgInt, y: StgAddr, z: StgWord, _: VoidInh ->
     // stdout
     if (x.x == 1L) {
       val s = y.asArray().copyOfRange(0, z.x.toInt())
@@ -102,14 +110,14 @@ val primFCalls: Map<String, () -> StgPrimOp> = mapOf(
 //    x.x = null
     UnboxedTuple(arrayOf())
   },
-  "localeEncoding" to wrap1 { _: VoidInh ->
+  "localeEncoding" to wrap1Boundary { _: VoidInh ->
     UnboxedTuple(arrayOf(StgAddr("UTF-8".toByteArray() + zeroBytes, 0)))
   },
   "stg_sig_install" to wrap4 { x: StgInt, y: StgInt, z: NullAddr, _: VoidInh ->
     // TODO
     UnboxedTuple(arrayOf(StgInt(-1)))
   },
-  "getProgArgv" to wrap3 { argc: StgAddr, argv: StgAddr, v: VoidInh ->
+  "getProgArgv" to wrap3Boundary { argc: StgAddr, argv: StgAddr, v: VoidInh ->
     val args = arrayOf(
       "trufflestg",
       *Language.currentContext().env.applicationArguments
@@ -167,7 +175,7 @@ val primFCalls: Map<String, () -> StgPrimOp> = mapOf(
       else -> panic("java.lang.Character.getType: unknown category")
     }.toLong())))
   },
-  "u_iswalpha" to wrap2 { x: StgInt, w: VoidInh ->
+  "u_iswalpha" to wrap2 { x: StgInt, _: VoidInh ->
     UnboxedTuple(arrayOf(StgInt(when (Character.getType(x.x.toInt()).toByte()) {
       Character.UPPERCASE_LETTER -> 1
       Character.LOWERCASE_LETTER -> 1
@@ -176,5 +184,33 @@ val primFCalls: Map<String, () -> StgPrimOp> = mapOf(
       Character.OTHER_LETTER -> 1
       else -> 0
     }.toLong())))
+  },
+  "u_iswupper" to wrap2 { x: StgInt, _: VoidInh ->
+    UnboxedTuple(arrayOf(StgInt(when (Character.getType(x.x.toInt()).toByte()) {
+      Character.UPPERCASE_LETTER -> 1
+      Character.TITLECASE_LETTER -> 1
+      else -> 0
+    }.toLong())))
+  },
+  "u_iswlower" to wrap2 { x: StgInt, _: VoidInh ->
+    UnboxedTuple(arrayOf(StgInt(when (Character.getType(x.x.toInt()).toByte()) {
+      Character.LOWERCASE_LETTER -> 1
+      else -> 0
+    }.toLong())))
   }
 )
+
+
+// lots of foreign calls need to be boundaries cause truffle doesn't like lots of the java stdlib
+inline fun <reified X, reified Y : Any> wrap1Boundary(crossinline f: (X) -> Y): () -> StgPrimOp = {
+  object : StgPrimOp1() { @CompilerDirectives.TruffleBoundary override fun execute(x: Any): Any = f((x as? X)!!) }
+}
+inline fun <reified X, reified Y, reified Z : Any> wrap2Boundary(crossinline f: (X, Y) -> Z): () -> StgPrimOp = {
+  object : StgPrimOp2() { @CompilerDirectives.TruffleBoundary override fun execute(x: Any, y: Any): Any = f((x as? X)!!, (y as? Y)!!) }
+}
+inline fun <reified X, reified Y, reified Z, reified W : Any> wrap3Boundary(crossinline f: (X, Y, Z) -> W): () -> StgPrimOp = {
+  object : StgPrimOp3() { @CompilerDirectives.TruffleBoundary override fun execute(x: Any, y: Any, z: Any): Any = f((x as? X)!!, (y as? Y)!!, (z as? Z)!!) }
+}
+inline fun <reified X, reified Y, reified Z, reified W : Any, reified A> wrap4Boundary(crossinline f: (X, Y, Z, A) -> W): () -> StgPrimOp = {
+  object : StgPrimOp4() { @CompilerDirectives.TruffleBoundary override fun execute(x: Any, y: Any, z: Any, a: Any): Any = f((x as? X)!!, (y as? Y)!!, (z as? Z)!!, (a as? A)!!) }
+}

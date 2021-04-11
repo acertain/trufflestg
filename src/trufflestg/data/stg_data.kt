@@ -12,7 +12,7 @@ import kotlin.reflect.KClass
 // JvmField should make PE faster and might help graal
 
 // everything here is temporary until i implement unboxed fields etc
-// TODO: sealed class for possible haskell values
+// TODO: sealed (or just abstract?) class for possible haskell values
 // TODO: CompilerDirectives.ValueType
 
 // VoidRep
@@ -20,9 +20,6 @@ object VoidInh
 
 object NullAddr
 
-//
-//// data constr
-//
 
 data class FullName(
   val unitId: String,

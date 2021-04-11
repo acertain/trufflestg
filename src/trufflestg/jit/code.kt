@@ -131,17 +131,39 @@ abstract class CaseAlts : Node() {
   abstract fun execute(frame: VirtualFrame, x: Any?): Any?
 
   class PrimAlts(
+    val ty: Stg.Type,
+    val tySig: String,
     @CompilerDirectives.CompilationFinal(dimensions = 1) val alts: Array<Any>,
     @field:Children val bodies: Array<Code>,
     @field:Child var default: Code?
   ) : CaseAlts() {
     @CompilerDirectives.CompilationFinal(dimensions = 1) val profiles: Array<BranchProfile> = Array(alts.size) { BranchProfile.create() }
 
+    val expectedType: Class<*> = when (ty) {
+      is Stg.Type.SingleValue -> when (ty.rep) {
+        is Stg.PrimRep.IntRep -> StgInt::class.java
+        is Stg.PrimRep.WordRep -> when (tySig) {
+          "Word#" -> StgWord::class.java
+          "Char#" -> StgChar::class.java
+          "GmpLimb#" -> StgWord::class.java // TODO: this is a type alias? when (tySig) might be not doable
+          else -> panic{"case of WordRep $tySig"}
+        }
+        is Stg.PrimRep.AddrRep -> {
+          if (alts.isNotEmpty()) panic{"case of Addr with non-default alts??"}
+          StgAddr::class.java
+        }
+        else -> TODO("case prim $ty")
+      }
+      else -> panic{"case prim of $ty"}
+    }
+
+    init { assert(alts.all { expectedType.isInstance(it) }) }
+
     @ExplodeLoop
     override fun execute(frame: VirtualFrame, x: Any?): Any? {
-      // TODO: assert x is actually a primitive
+      val x2 = CompilerDirectives.castExact(x, expectedType)
       alts.forEachIndexed { ix, y ->
-        if (x == y) {
+        if (x2 == y) {
           profiles[ix].enter()
           return bodies[ix].execute(frame)
         }
@@ -178,26 +200,17 @@ abstract class CaseAlts : Node() {
     @ExplodeLoop
     override fun execute(frame: VirtualFrame, x: Any?): Any? {
       if (ty.cons.size == 1 && ty.cons.contentEquals(cons)) {
-        val x2 = CompilerDirectives.castExact(x, cons[0].klass)
+        val x2 = cons[0].unsafeCast(x)
         slots[0].forEachIndexed { sx, s -> frame.setObject(s, x2.getValue(sx)) }
         return bodies[0].execute(frame)
       } else {
+        // TODO: use is ZeroArgDataCon and tag for zero-arg cons? might let it be compiled as a switch instead of ifs
         cons.forEachIndexed { ix, c ->
-          if (c.size == 0) {
-            // TODO: use is ZeroArgDataCon and tag instead? might let it be compiled as a switch instead of ifs
-            if (c.zeroArgCon!! === x) {
-              profiles[ix].enter()
-              return bodies[ix].execute(frame)
-            }
-          } else {
-            // TODO: use CompilerDirectives.isExact once its released
-            if (c.klass!!.isInstance(x)) {
-              val x2 = CompilerDirectives.castExact(x, c.klass)
-              profiles[ix].enter()
-              val sls = slots[ix]
-              sls.forEachIndexed { sx, s -> frame.setObject(s, x2.getValue(sx)) }
-              return bodies[ix].execute(frame)
-            }
+          val y = c.tryIs(x)
+          if (y !== null) {
+            profiles[ix].enter()
+            slots[ix].forEachIndexed { sx, s -> frame.setObject(s, y.getValue(sx)) }
+            return bodies[ix].execute(frame)
           }
         }
       }
@@ -315,11 +328,13 @@ abstract class Rhs : Node() {
     val con: DataConInfo,
     @field:Children val args: Array<Arg>
   ) : Rhs() {
+    private val isUnboxedTuple = con.name.unitId == "ghc-prim" && con.name.module == "GHC.Prim"
+                              && (con.name.name.startsWith("(#") || con.name.name == "Unit#")
+
     @ExplodeLoop
     override fun execute(frame: VirtualFrame): Any {
       val xs = map(args) { it.execute(frame) }
-      if (con.name.unitId == "ghc-prim" && con.name.module == "GHC.Prim" &&
-          (con.name.name.startsWith("(#") || con.name.name == "Unit#")) {
+      if (isUnboxedTuple) {
         return UnboxedTuple(xs)
       }
       return con.build(xs)

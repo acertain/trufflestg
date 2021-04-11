@@ -21,6 +21,7 @@ import com.oracle.truffle.api.source.SourceSection
 import trufflestg.data.Closure
 import trufflestg.data.VoidInh
 import trufflestg.stg.*
+import java.net.URLClassLoader
 
 internal val noArguments = arrayOf<Any>()
 
@@ -48,9 +49,10 @@ class MainRootNode(
   val cl: Closure,
   val language: Language
 ): CadenzaRootNode(language, FrameDescriptor()) {
+
   @field:Child var callWhnf = CallWhnf(cl.arity, false)
   override fun execute(frame: VirtualFrame): Any {
-    val fr = Truffle.getRuntime().createVirtualFrame(arrayOf(), FrameDescriptor())
+    val fr = Truffle.getRuntime().createVirtualFrame(arrayOf(), frameDescriptor)
     // TODO: should have no args?
     try {
       callWhnf.execute(fr, cl, arrayOf(VoidInh, *frame.arguments))
@@ -98,6 +100,7 @@ open class ClosureBody constructor(
 open class ClosureRootNode(
   private val language: Language,
   frameDescriptor: FrameDescriptor = FrameDescriptor(),
+  // TODO: assert is type/cast to type to help graal?
   val argBinders: Array<Stg.SBinder>,
   // slot = closure.env[ix]
   @CompilerDirectives.CompilationFinal(dimensions = 1) val envPreamble: Array<Pair<FrameSlot, Int>>,

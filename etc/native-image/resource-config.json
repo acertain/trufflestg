@@ -1,0 +1,19 @@
+{
+  "resources":{
+  "includes":[
+    {"pattern":"\\QMETA-INF/native/linux64/libjansi.so\\E"}, 
+    {"pattern":"\\QMETA-INF/services/com.oracle.truffle.api.TruffleLanguage$Provider\\E"}, 
+    {"pattern":"\\QMETA-INF/services/com.oracle.truffle.api.TruffleRuntimeAccess\\E"}, 
+    {"pattern":"\\QMETA-INF/services/com.oracle.truffle.api.instrumentation.TruffleInstrument$Provider\\E"}, 
+    {"pattern":"\\QMETA-INF/services/com.oracle.truffle.api.library.DefaultExportProvider\\E"}, 
+    {"pattern":"\\QMETA-INF/services/java.nio.file.spi.FileSystemProvider\\E"}, 
+    {"pattern":"\\QMETA-INF/services/jdk.vm.ci.services.JVMCIServiceLocator\\E"}, 
+    {"pattern":"\\QMETA-INF/services/kotlin.reflect.jvm.internal.impl.resolve.ExternalOverridabilityCondition\\E"}, 
+    {"pattern":"\\QMETA-INF/services/org.graalvm.compiler.truffle.runtime.LoopNodeFactory\\E"}, 
+    {"pattern":"\\QMETA-INF/services/org.graalvm.polyglot.impl.AbstractPolyglotImpl\\E"}, 
+    {"pattern":"\\Qcom/oracle/truffle/nfi/impl/NFILanguageImpl.class\\E"}, 
+    {"pattern":"\\Qtrufflestg/Language.class\\E"},
+    {"pattern":"\\Qkotlin/kotlin.kotlin_builtins\\E"}
+  ]},
+  "bundles":[]
+}

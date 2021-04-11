@@ -21,6 +21,7 @@ import trufflestg.jit.IndirectCallerNode
 
 
 // TODO: selector thunks
+// TODO: could avoid array allocation on thunk invocation by storing array in Closure/mb having a ThunkClosure class?
 class Thunk(
   @JvmField var clos: Closure?,
   @JvmField var value_: Any?
@@ -30,7 +31,6 @@ class Thunk(
     if (v == null) {
       CompilerDirectives.transferToInterpreter()
       if (clos != null) { panic("Thunk.expectValue() but it's not evaluated") }
-      // TODO: threading?
       else { panic("Thunk.expectValue() but evaluation already in progress (infinite loop? bad letrec?)") }
     }
     return v
@@ -69,6 +69,8 @@ abstract class Closure (
   abstract fun pap_7(a: Any, b: Any, c: Any, d: Any, e: Any, f: Any, g: Any): Closure
   abstract fun pap_8(a: Any, b: Any, c: Any, d: Any, e: Any, f: Any, g: Any, h: Any): Closure
   abstract fun pap_generic(ys: Array<Any>): Closure
+
+//  abstract fun prep_call_1(x: Any): Array<Any>
 }
 
 // saturated calls

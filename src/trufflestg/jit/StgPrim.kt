@@ -67,6 +67,7 @@ val primOps: Map<String, () -> StgPrimOp> = mapOf(
 
   "+#" to wrap2 { x: StgInt, y: StgInt -> StgInt(x.x + y.x) },
   "-#" to wrap2 { x: StgInt, y: StgInt -> StgInt(x.x - y.x) },
+  "negateInt#" to wrap1 { x: StgInt -> StgInt(-x.x) },
   "*#" to wrap2 { x: StgInt, y: StgInt -> StgInt(x.x * y.x) },
   "<=#" to wrap2 { x: StgInt, y: StgInt -> StgInt(if (x.x <= y.x) 1L else 0L) },
   ">#" to wrap2 { x: StgInt, y: StgInt -> StgInt(if (x.x > y.x) 1L else 0L) },
@@ -92,13 +93,13 @@ val primOps: Map<String, () -> StgPrimOp> = mapOf(
     UnboxedTuple(arrayOf(StgInt(x.x / y.x), StgInt(x.x % y.x)))
   },
 
-  "newMVar#" to wrap1 { x: VoidInh -> UnboxedTuple(arrayOf(StgMVar(false, null))) },
+  "newMVar#" to wrap1 { _: VoidInh -> UnboxedTuple(arrayOf(StgMVar(false, null))) },
   "putMVar#" to wrap3 { x: StgMVar, y: Any, z: VoidInh ->
     x.full = true
     x.value = y
     z
   },
-  "takeMVar#" to wrap2 { x: StgMVar, y: VoidInh ->
+  "takeMVar#" to wrap2 { x: StgMVar, _: VoidInh ->
     if (!x.full) todo
     val w = x.value!!
     x.full = false
@@ -112,7 +113,7 @@ val primOps: Map<String, () -> StgPrimOp> = mapOf(
 
   "eqAddr#" to wrap2 { x: Any, y: Any -> StgInt(if (x === y) 1L else 0L) },
 
-  "myThreadId#" to wrap1 { x: VoidInh -> UnboxedTuple(arrayOf(ThreadId(Thread.currentThread().id))) },
+  "myThreadId#" to wrap1 { _: VoidInh -> UnboxedTuple(arrayOf(ThreadId(Thread.currentThread().id))) },
 
   "makeStablePtr#" to wrap2 { x: Any, _: VoidInh -> UnboxedTuple(arrayOf(StablePtr(x))) },
 
@@ -185,11 +186,10 @@ val primOps: Map<String, () -> StgPrimOp> = mapOf(
         }
       }
       // TODO: profile which cons we've seen?
-      // TODO: use getInfo().tag for big types?
+      // TODO: do a virtual call to getInfo().tag for big types?
       ty.cons.forEachIndexed { ix, c ->
         if (c.size != 0) {
-          // TODO: use CompilerDirectives.isExact once its released
-          if (c.klass!!.isInstance(x)) { return StgInt(ix.toLong()) }
+          if (c.tryIs(x) !== null) { return StgInt(ix.toLong()) }
         }
       }
       panic("bad dataToTag#")
@@ -232,6 +232,12 @@ val primOps: Map<String, () -> StgPrimOp> = mapOf(
 
   // TODO?
   "touch#" to wrap2 { x: Any, y: VoidInh -> y },
+
+  // FIXME: should tail call here when we're in tail position (& also probably for other primops that use CallWhnf)
+  "seq#" to { object : StgPrimOp(2) {
+    @field:Child var callWhnf = CallWhnf(0, false)
+    override fun run(frame: VirtualFrame, args: Array<Any>): Any = callWhnf.execute(frame, args[0], arrayOf())
+  }},
 
   "raise#" to wrap1 { e: Any -> (throw HaskellException(e)) as VoidInh },
   "raiseIO#" to wrap2 { e: Any, _: VoidInh -> (throw HaskellException(e)) as VoidInh },
