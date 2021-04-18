@@ -3,9 +3,6 @@ package trufflestg.jit
 
 import com.oracle.truffle.api.CompilerDirectives
 import com.oracle.truffle.api.ExactMath
-import trufflestg.data.*
-import trufflestg.panic
-import trufflestg.todo
 import com.oracle.truffle.api.dsl.TypeSystemReference
 import com.oracle.truffle.api.frame.VirtualFrame
 import com.oracle.truffle.api.nodes.ExplodeLoop
@@ -13,8 +10,10 @@ import com.oracle.truffle.api.nodes.Node
 import trufflestg.array_utils.map
 import trufflestg.array_utils.toByteArray
 import trufflestg.array_utils.write
-import com.oracle.truffle.api.dsl.NodeChild
-import trufflestg.data.DataTypes
+import trufflestg.data.*
+import trufflestg.panic
+import trufflestg.todo
+import java.lang.ArithmeticException
 import java.nio.ByteBuffer
 
 
@@ -45,6 +44,15 @@ class StgPrim(
 // i think usually we need to whnf ourselves?
 @OptIn(ExperimentalUnsignedTypes::class)
 val primOps: Map<String, () -> StgPrimOp> = mapOf(
+  "gtChar#" to wrap2 { x: StgChar, y: StgChar -> StgInt(if (x.x > y.x) 1L else 0L) },
+  "geChar#" to wrap2 { x: StgChar, y: StgChar -> StgInt(if (x.x >= y.x) 1L else 0L) },
+  "eqChar#" to wrap2 { x: StgChar, y: StgChar -> StgInt(if (x.x == y.x) 1L else 0L) },
+  "neChar#" to wrap2 { x: StgChar, y: StgChar -> StgInt(if (x.x != y.x) 1L else 0L) },
+  "ltChar#" to wrap2 { x: StgChar, y: StgChar -> StgInt(if (x.x < y.x) 1L else 0L) },
+  "leChar#" to wrap2 { x: StgChar, y: StgChar -> StgInt(if (x.x <= y.x) 1L else 0L) },
+
+  "ord#" to wrap1 { x: StgChar -> StgInt(x.x.toLong()) }, // TODO: should this be an unsigned conversion?
+
   "catch#" to { object : StgPrimOp(3) {
     @field:Child var callWhnf1 = CallWhnf(1, false)
     @field:Child var callWhnf2 = CallWhnf(2, false)
@@ -75,10 +83,17 @@ val primOps: Map<String, () -> StgPrimOp> = mapOf(
   ">=#" to wrap2 { x: StgInt, y: StgInt -> StgInt(if (x.x >= y.x) 1L else 0L) },
   "==#" to wrap2 { x: StgInt, y: StgInt -> StgInt(if (x.x == y.x) 1L else 0L) },
 
+  "andI#" to wrap2 { x: StgInt, y: StgInt -> StgInt(x.x and y.x) },
+  "orI#" to wrap2 { x: StgInt, y: StgInt -> StgInt(x.x or y.x) },
+  "xorI#" to wrap2 { x: StgInt, y: StgInt -> StgInt(x.x xor y.x) },
+
   "addIntC#" to wrap2 { x: StgInt, y: StgInt ->
-    // TODO: slow
-    try { UnboxedTuple(arrayOf(StgInt(Math.addExact(x.x, y.x)), StgInt(0L))) }
-    catch (e: ArithmeticException) { UnboxedTuple(arrayOf(StgInt(x.x + y.x), StgInt(1L))) }
+    val r = x.x + y.x
+    UnboxedTuple(arrayOf(StgInt(r), StgInt(if(x.x xor r and (y.x xor r) < 0) 1L else 0L)))
+  },
+  "subIntC#" to wrap2 { x: StgInt, y: StgInt ->
+    val r = x.x - y.x
+    UnboxedTuple(arrayOf(StgInt(r), StgInt(if(x.x xor r and (y.x xor r) < 0) 1L else 0L)))
   },
 
   "timesInt2#" to wrap2 { x: StgInt, y: StgInt ->
@@ -134,11 +149,7 @@ val primOps: Map<String, () -> StgPrimOp> = mapOf(
   "readMutVar#" to wrap2 { x: StgMutVar, _: VoidInh -> UnboxedTuple(arrayOf(x.x)) },
   "writeMutVar#" to wrap3 { x: StgMutVar, y: Any, v: VoidInh -> x.x = y; v },
 
-  "leChar#" to wrap2 { x: StgChar, y: StgChar -> StgInt(if (x.x <= y.x) 1L else 0L) },
-  "gtChar#" to wrap2 { x: StgChar, y: StgChar -> StgInt(if (x.x > y.x) 1L else 0L) },
-  "geChar#" to wrap2 { x: StgChar, y: StgChar -> StgInt(if (x.x >= y.x) 1L else 0L) },
-  "ord#" to wrap1 { x: StgChar -> StgInt(x.x.toLong()) }, // TODO: should this be an unsigned conversion?
-  "chr#" to wrap1 { x: StgInt -> StgChar(x.x.toInt()) }, // TODO: ^
+  "chr#" to wrap1 { x: StgInt -> StgChar(x.x.toInt()) }, // TODO: should this be an unsigned conversion?
 
   "int2Word#" to wrap1 { x: StgInt -> StgWord(x.x.toULong()) },
   "word2Int#" to wrap1 { x: StgWord -> StgInt(x.x.toLong()) },
@@ -149,7 +160,6 @@ val primOps: Map<String, () -> StgPrimOp> = mapOf(
   "eqWord#" to wrap2 { x: StgWord, y: StgWord -> StgInt(if (x.x == y.x) 1L else 0L) },
   "minusWord#" to wrap2 { x: StgWord, y: StgWord -> StgWord(x.x - y.x) },
 
-  "eqChar#" to wrap2 { x: StgChar, y: StgChar -> StgInt(if (x.x == y.x) 1L else 0L) },
 
   "tagToEnum#" to { object : StgPrimOp1() {
     // TODO: need to do this lazily because parent isn't set at initialization
@@ -222,12 +232,22 @@ val primOps: Map<String, () -> StgPrimOp> = mapOf(
   "writeWideCharOffAddr#" to wrap4 { x: StgAddr, y: StgInt, z: StgChar, v: VoidInh ->
     x.arr.write(x.offset + 4*y.x.toInt(), z.x.toByteArray()); v },
 
+  "writeWordArray#" to wrap4 { x: StgMutableByteArray, y: StgInt, z: StgWord, v: VoidInh ->
+    x.arr.write(8*y.toInt(), z.x.toLong()); v },
+
+  "indexWordArray#" to wrap2 { x: StgMutableByteArray, y: StgInt ->
+    StgWord(x.asBuffer().getLong(y.toInt()*8).toULong())
+  },
+
   "plusAddr#" to wrap2 { x: StgAddr, y: StgInt -> StgAddr(x.arr, x.offset + y.x.toInt()) },
 
   // TODO: make sure these are right
   "uncheckedIShiftL#" to wrap2 { x: StgInt, y: StgInt -> StgInt(x.x shl y.x.toInt()) },
-  "uncheckedShiftRL#" to wrap2 { x: StgWord, y: StgInt -> StgWord(x.x shr y.x.toInt()) },
+  "uncheckedIShiftRL#" to wrap2 { x: StgInt, y: StgInt -> StgInt(x.x ushr y.x.toInt()) },
+  "uncheckedIShiftRA#" to wrap2 { x: StgInt, y: StgInt -> StgInt(x.x shr y.x.toInt()) },
   "uncheckedShiftL#" to wrap2 { x: StgWord, y: StgInt -> StgWord(x.x shl y.x.toInt()) },
+  "uncheckedShiftRL#" to wrap2 { x: StgWord, y: StgInt -> StgWord(x.x shr y.x.toInt()) },
+
   "or#" to wrap2 { x: StgWord, y: StgWord -> StgWord(x.x or y.x) },
 
   // TODO?
@@ -239,9 +259,12 @@ val primOps: Map<String, () -> StgPrimOp> = mapOf(
     override fun run(frame: VirtualFrame, args: Array<Any>): Any = callWhnf.execute(frame, args[0], arrayOf())
   }},
 
-  "raise#" to wrap1 { e: Any -> (throw HaskellException(e)) as VoidInh },
-  "raiseIO#" to wrap2 { e: Any, _: VoidInh -> (throw HaskellException(e)) as VoidInh },
+  "raise#" to wrap1 { e: Any -> throw HaskellException(e) },
+  "raiseIO#" to wrap2 { e: Any, _: VoidInh -> throw HaskellException(e) },
 
+  "newByteArray#" to wrap2 { x: StgInt, _: VoidInh ->
+    UnboxedTuple(arrayOf(StgMutableByteArray(ByteArray(x.toInt()))))
+  },
   // TODO: actually pin & align? only matters if we want to use native code
   // FIXME: or for readAddrOffAddr, or if casted to Addr?
   "newAlignedPinnedByteArray#" to wrap3 { x: StgInt, alignment: StgInt, _: VoidInh ->
@@ -251,7 +274,9 @@ val primOps: Map<String, () -> StgPrimOp> = mapOf(
   "unsafeFreezeByteArray#" to wrap2 { arr: StgMutableByteArray, _: VoidInh ->
     arr.frozen = true
     UnboxedTuple(arrayOf(arr)) },
-  "byteArrayContents#" to wrap1 { arr: StgMutableByteArray -> StgAddr(arr.arr, 0) }
+  "byteArrayContents#" to wrap1 { arr: StgMutableByteArray -> StgAddr(arr.arr, 0) },
+
+  "sizeofByteArray#" to wrap1 { x: StgMutableByteArray -> StgInt(x.arr.size.toLong()) }
 )
 
 

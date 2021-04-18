@@ -1,25 +1,19 @@
 package trufflestg.jit
 
 import com.oracle.truffle.api.CompilerDirectives
-import com.oracle.truffle.api.Truffle
-import com.oracle.truffle.api.TruffleLanguage
+import com.oracle.truffle.api.exception.AbstractTruffleException
+import com.oracle.truffle.api.frame.VirtualFrame
+import com.oracle.truffle.api.interop.ExceptionType
+import com.oracle.truffle.api.interop.InteropLibrary
+import com.oracle.truffle.api.library.ExportLibrary
+import com.oracle.truffle.api.library.ExportMessage
+import com.oracle.truffle.api.nodes.Node
+import trufflestg.Language
+import trufflestg.array_utils.*
 import trufflestg.data.*
 import trufflestg.panic
 import trufflestg.stg.Stg
-import com.oracle.truffle.api.frame.VirtualFrame
-import trufflestg.Language
-import trufflestg.array_utils.*
-import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
-
-object GlobalStore {
-  var GHCConcSignalSignalHandlerStore: Any? = null
-}
-
-
-val zeroBytes: ByteArray = byteArrayOf(0, 0, 0, 0, 0, 0, 0, 0)
-
-var globalHeap = ByteArray(0)
 
 class StgFCall(
   val x: Stg.ForeignCall,
@@ -38,15 +32,25 @@ class StgFCall(
   }
 }
 
-
-var md5: MessageDigest? = null
-
-@CompilerDirectives.TruffleBoundary
 fun ByteArray.asCString(): String = String(copyOfRange(0, indexOf(0x00)))
+val posix = jnr.posix.POSIXFactory.getPOSIX()
+val zeroBytes: ByteArray = byteArrayOf(0, 0, 0, 0, 0, 0, 0, 0)
 
-@CompilerDirectives.TruffleBoundary
-fun getMD5(): MessageDigest = MessageDigest.getInstance("MD5")
+@ExportLibrary(InteropLibrary::class)
+class TruffleStgExitException(val status: Int) : AbstractTruffleException() {
+  @ExportMessage fun getExceptionType(): ExceptionType = ExceptionType.EXIT
+  @ExportMessage fun getExceptionExitStatus(): Int = status
+}
 
+// mutable state
+var md5: MessageDigest? = null
+object GlobalStore {
+  var GHCConcSignalSignalHandlerStore: Any? = null
+}
+var globalHeap = ByteArray(0)
+
+
+@OptIn(kotlin.ExperimentalUnsignedTypes::class)
 val primFCalls: Map<String, () -> StgPrimOp> = mapOf(
   // TODO: do something safer! (use x to store MessageDigest object?)
   "__hsbase_MD5Init" to wrap2Boundary { x: StgAddr, y: VoidInh ->
@@ -104,6 +108,11 @@ val primFCalls: Map<String, () -> StgPrimOp> = mapOf(
       panic("nyi ghczuwrapperZC20ZCbaseZCSystemziPosixziInternalsZCwrite")
     }
   },
+  "ghczuwrapperZC22ZCbaseZCSystemziPosixziInternalsZCread" to wrap4Boundary { x: StgInt, y: StgAddr, z: StgWord, _: VoidInh ->
+    UnboxedTuple(arrayOf(StgInt(posix.read(x.x.toInt(), y.asBuffer(), z.x.toLong()))))
+  },
+
+  "shutdownHaskellAndExit" to wrap3Boundary { x: StgInt, _: StgInt, _: VoidInh -> throw TruffleStgExitException(x.x.toInt()) },
 
   "hs_free_stable_ptr" to wrap2 { x: StablePtr, _: VoidInh ->
     // FIXME: getting deRefStablePtr after freeStablePtr, so i'm disabling this for now
@@ -117,7 +126,7 @@ val primFCalls: Map<String, () -> StgPrimOp> = mapOf(
     // TODO
     UnboxedTuple(arrayOf(StgInt(-1)))
   },
-  "getProgArgv" to wrap3Boundary { argc: StgAddr, argv: StgAddr, v: VoidInh ->
+  "getProgArgv" to wrap3Boundary { argc: StgAddr, argv: StgAddr, _: VoidInh ->
     val args = arrayOf(
       "trufflestg",
       *Language.currentContext().env.applicationArguments
@@ -136,10 +145,10 @@ val primFCalls: Map<String, () -> StgPrimOp> = mapOf(
     argv.arr.write(argv.offset, argvIx.toLong().toByteArray())
     UnboxedTuple(arrayOf())
   },
-  "u_towupper" to wrap2 { x: StgInt, w: VoidInh ->
+  "u_towupper" to wrap2 { x: StgInt, _: VoidInh ->
     UnboxedTuple(arrayOf(StgInt(Character.toUpperCase(x.x.toInt()).toLong())))
   },
-  "u_gencat" to wrap2 { x: StgInt, w: VoidInh ->
+  "u_gencat" to wrap2 { x: StgInt, _: VoidInh ->
     UnboxedTuple(arrayOf(StgInt(when (Character.getType(x.x.toInt()).toByte()) {
       // in java's order, mapping to haskell's order
       Character.UNASSIGNED -> 29
@@ -195,6 +204,19 @@ val primFCalls: Map<String, () -> StgPrimOp> = mapOf(
   "u_iswlower" to wrap2 { x: StgInt, _: VoidInh ->
     UnboxedTuple(arrayOf(StgInt(when (Character.getType(x.x.toInt()).toByte()) {
       Character.LOWERCASE_LETTER -> 1
+      else -> 0
+    }.toLong())))
+  },
+  "u_iswalnum" to wrap2 { x: StgInt, _: VoidInh ->
+    UnboxedTuple(arrayOf(StgInt(when (Character.getType(x.x.toInt()).toByte()) {
+      Character.UPPERCASE_LETTER -> 1
+      Character.LOWERCASE_LETTER -> 1
+      Character.TITLECASE_LETTER -> 1
+      Character.MODIFIER_LETTER -> 1
+      Character.OTHER_LETTER -> 1
+      Character.OTHER_NUMBER -> 1
+      Character.DECIMAL_DIGIT_NUMBER -> 1
+      Character.LETTER_NUMBER -> 1
       else -> 0
     }.toLong())))
   }

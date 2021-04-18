@@ -22,6 +22,7 @@ import trufflestg.jit.IndirectCallerNode
 
 // TODO: selector thunks
 // TODO: could avoid array allocation on thunk invocation by storing array in Closure/mb having a ThunkClosure class?
+// TODO: once we have thunk forwarding could inline Closure into Thunk?
 class Thunk(
   @JvmField var clos: Closure?,
   @JvmField var value_: Any?

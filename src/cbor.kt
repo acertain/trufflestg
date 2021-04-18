@@ -115,6 +115,7 @@ fun KClass<*>.isInline(): Boolean {
     java.declaredMethods.any { it.name == "box-impl" }
 }
 
+// TODO: use https://docs.oracle.com/en/java/javase/14/docs/api/java.base/java/lang/ClassValue.html here?
 val argsMap: Cache<KType,Array<KType?>> = Cache { it.arguments.map { x -> x.type }.toTypedArray() }
 val paramsTypes: Cache<KCallable<*>, Array<KType>> = Cache { it.parameters.map { x -> x.type }.toTypedArray() }
 val isEnumMap: Cache<Class<*>, Boolean> = Cache { Enum::class.java.isAssignableFrom(it) }

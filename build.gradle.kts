@@ -56,6 +56,7 @@ dependencies {
   testImplementation("org.junit.jupiter:junit-jupiter:5.5.2")
   implementation("org.jetbrains.kotlin:kotlin-script-runtime:1.4.32")
   implementation("org.jetbrains.kotlin:kotlin-reflect:1.4.32")
+  implementation("com.github.jnr:jnr-posix:3.1.5")
 }
 
 java {

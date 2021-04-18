@@ -362,6 +362,7 @@ class Module(
     }
   }.associateBy { it.binder.binderId }
 
+  // TODO: build classes lazily
   val tyCons: Map<Stg.TyConId, TyCon>
   val dataCons: Map<Stg.DataConId, DataConInfo>
   init {

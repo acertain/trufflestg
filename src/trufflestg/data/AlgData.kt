@@ -227,7 +227,7 @@ class DynamicClassDataConInfo(
       when (it) {
         klass.name -> klass
         else -> TODO(it)
-      }} as Class<DataFrameBuilder>
+      }}
     builderKlass.constructors[0].newInstance() as DataFrameBuilder
   }
 }

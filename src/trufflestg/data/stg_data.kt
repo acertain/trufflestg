@@ -8,6 +8,7 @@ import org.intelligence.diagnostics.error
 import org.intelligence.pretty.Pretty
 import java.lang.ref.WeakReference
 import kotlin.reflect.KClass
+import java.nio.ByteBuffer
 
 // JvmField should make PE faster and might help graal
 
@@ -53,6 +54,7 @@ class StgAddr(
   operator fun set(ix: StgInt, y: Byte) { arr[offset + ix.x.toInt()] = y }
 
   fun asArray(): ByteArray = arr.copyOfRange(offset, arr.size)
+  fun asBuffer(): ByteBuffer = ByteBuffer.wrap(arr, offset, arr.size - offset)
 }
 
 // afaict this guy can be mutable (& freeze & unfreeze operate on it)?
@@ -67,6 +69,8 @@ class StgMutableByteArray(
   @JvmField val arr: ByteArray
 ) {
   @JvmField var frozen: Boolean = false
+
+  fun asBuffer(): ByteBuffer = ByteBuffer.wrap(arr)
 }
 
 //class StgByteArray(
@@ -106,6 +110,7 @@ class WeakRef(
 )
 
 // TODO: don't store these in closures & etc, only use them in functions, maybe ensureVirtualized
+// TODO: UnboxedTuple1 etc?
 @CompilerDirectives.ValueType
 class UnboxedTuple(
   @JvmField val x: Array<Any>
