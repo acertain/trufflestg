@@ -142,16 +142,12 @@ abstract class CaseAlts : Node() {
     val expectedType: Class<*> = when (ty) {
       is Stg.Type.SingleValue -> when (ty.rep) {
         is Stg.PrimRep.IntRep -> StgInt::class.java
-        is Stg.PrimRep.WordRep -> when (tySig) {
-          "Word#" -> StgWord::class.java
-          "Char#" -> StgChar::class.java
-          "GmpLimb#" -> StgWord::class.java // TODO: this is a type alias? when (tySig) might be not doable
-          else -> panic{"case of WordRep $tySig"}
-        }
+        is Stg.PrimRep.WordRep -> StgWord::class.java
         is Stg.PrimRep.AddrRep -> {
           if (alts.isNotEmpty()) panic{"case of Addr with non-default alts??"}
           StgAddr::class.java
         }
+        is Stg.PrimRep.DoubleRep -> StgDouble::class.java
         else -> TODO("case prim $ty")
       }
       else -> panic{"case prim of $ty"}

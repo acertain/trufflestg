@@ -1,6 +1,7 @@
 package trufflestg.jit
 
 import com.oracle.truffle.api.CompilerDirectives
+import com.oracle.truffle.api.TruffleStackTrace
 import com.oracle.truffle.api.exception.AbstractTruffleException
 import com.oracle.truffle.api.frame.VirtualFrame
 import com.oracle.truffle.api.interop.ExceptionType
@@ -35,6 +36,15 @@ class StgFCall(
 fun ByteArray.asCString(): String = String(copyOfRange(0, indexOf(0x00)))
 val posix = jnr.posix.POSIXFactory.getPOSIX()
 val zeroBytes: ByteArray = byteArrayOf(0, 0, 0, 0, 0, 0, 0, 0)
+
+@CompilerDirectives.TruffleBoundary fun printStackTrace() {
+  var last: String? = null
+  TruffleStackTrace.getStackTrace(Exception()).forEach {
+    val s = "  at <haskell> ${it.target.rootNode.name}"
+    if (s != last) println(s)
+    last = s
+  }
+}
 
 @ExportLibrary(InteropLibrary::class)
 class TruffleStgExitException(val status: Int) : AbstractTruffleException() {
@@ -74,6 +84,9 @@ val primFCalls: Map<String, () -> StgPrimOp> = mapOf(
     System.err.println("errorBelch2: ${x.asArray().asCString()} ${y.asArray().asCString()}")
     v
   },
+  "debugBelch2" to wrap3Boundary { x: StgAddr, y: StgAddr, v: VoidInh ->
+    System.err.println("debugBelch2: ${x.asArray().asCString()} ${y.asArray().asCString()}"); v
+  },
 
   "rts_setMainThread" to wrap2 { x: WeakRef, _: VoidInh -> UnboxedTuple(arrayOf()) },
   "getOrSetGHCConcSignalSignalHandlerStore" to wrap2 { a: StablePtr, _: VoidInh ->
@@ -95,6 +108,8 @@ val primFCalls: Map<String, () -> StgPrimOp> = mapOf(
       panic("todo: fdReady ${args[0]}")
     }
   } },
+
+  "rintDouble" to wrap2 { x: StgDouble, _: VoidInh -> UnboxedTuple(arrayOf(StgDouble(Math.rint(x.x)))) },
 
   "rtsSupportsBoundThreads" to wrap1 { _: VoidInh -> UnboxedTuple(arrayOf(StgInt(0L))) },
 

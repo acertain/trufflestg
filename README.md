@@ -13,11 +13,10 @@ With that said, this is probably the best (easiest & fastest) way to get haskell
 
 Use https://github.com/acertain/ghc-whole-program-compiler-project:
 - compile normally using ghc-wpc (pinned in that repo, but you might want to try a newer version, as you'll need to build ghc yourself otherwise)
-- use `external-stg/app/mkfullpak.hs` on the `Main.o_ghc_stgapp` file
-- use `external-stg/app/fullpack-prep-for-truffle.hs` on the `Main.fullpak`
-- `./gradlew run --args="path/to/Main.truffleghc/Main args"` or `./gradlew installDist` then `build/install/trufflestg/bin/trufflestg path/to/Main.truffleghc/Main args`
+- use `ghc-whole-program-compiler-project/external-stg/app/mktrufflestg.hs` on the `Main.o_ghc_stgapp` file
+- `./gradlew run --args="path/to/Main.trufflestg/stg/Main args"` or `./gradlew installDist` then `build/install/trufflestg/bin/trufflestg path/to/Main.trufflestg/stg/Main args`
 
-You might need to use graalvm 11 as your jvm too, idk
+You likely need to use graalvm 11 as your jvm
 
 * `gradle run` will run the launcher out of the local directory without installing anything.
 
@@ -27,7 +26,7 @@ You might need to use graalvm 11 as your jvm too, idk
 
 ## Incomplete
 
-This is *not* a complete haskell implementation:
+This is *not* a complete stg implementation:
 - Most primops are missing
 - FFI doesn't work, and only a few C functions are polyfilled
 - There's probably bugs

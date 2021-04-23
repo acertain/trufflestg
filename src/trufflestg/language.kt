@@ -146,9 +146,9 @@ class Language : TruffleLanguage<Language.Context>() {
     val source = request.source
     val path = source.path
 
-    if (!path.endsWith(".truffleghc/Main")) {
+    if (!path.endsWith(".trufflestg/stg/Main")) {
       // TODO
-      panic{"Bad path $path: should end with .truffleghc/Main"}
+      panic{"Bad path $path: should end with .trufflestg/stg/Main"}
     }
 
     if (request.argumentNames.size > 0) {

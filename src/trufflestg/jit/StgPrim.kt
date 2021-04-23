@@ -8,13 +8,13 @@ import com.oracle.truffle.api.frame.VirtualFrame
 import com.oracle.truffle.api.nodes.ExplodeLoop
 import com.oracle.truffle.api.nodes.Node
 import trufflestg.array_utils.map
-import trufflestg.array_utils.toByteArray
 import trufflestg.array_utils.write
 import trufflestg.data.*
 import trufflestg.panic
 import trufflestg.todo
-import java.lang.ArithmeticException
 import java.nio.ByteBuffer
+import kotlin.math.absoluteValue
+import kotlin.math.pow
 
 
 class StgPrim(
@@ -33,6 +33,7 @@ class StgPrim(
     if (opNode != null) {
       if (args.size != opNode!!.arity) panic{"StgPrim $op bad arity"}
       val x = opNode!!.run(frame, xs)
+      // println("$op ${xs.contentToString()} = $x")
       return x
     }
     panic{"$op nyi"}
@@ -42,16 +43,17 @@ class StgPrim(
 // TODO: should prims of type -> IO () return VoidInh or UnboxedTuple(arrayOf()) ?
 // TODO: understand strictness of prims taking lifted types
 // i think usually we need to whnf ourselves?
+@Suppress("LocalVariableName")
 @OptIn(ExperimentalUnsignedTypes::class)
 val primOps: Map<String, () -> StgPrimOp> = mapOf(
-  "gtChar#" to wrap2 { x: StgChar, y: StgChar -> StgInt(if (x.x > y.x) 1L else 0L) },
-  "geChar#" to wrap2 { x: StgChar, y: StgChar -> StgInt(if (x.x >= y.x) 1L else 0L) },
-  "eqChar#" to wrap2 { x: StgChar, y: StgChar -> StgInt(if (x.x == y.x) 1L else 0L) },
-  "neChar#" to wrap2 { x: StgChar, y: StgChar -> StgInt(if (x.x != y.x) 1L else 0L) },
-  "ltChar#" to wrap2 { x: StgChar, y: StgChar -> StgInt(if (x.x < y.x) 1L else 0L) },
-  "leChar#" to wrap2 { x: StgChar, y: StgChar -> StgInt(if (x.x <= y.x) 1L else 0L) },
+  "gtChar#" to wrap2 { x: StgWord, y: StgWord -> StgInt(if (x.x > y.x) 1L else 0L) },
+  "geChar#" to wrap2 { x: StgWord, y: StgWord -> StgInt(if (x.x >= y.x) 1L else 0L) },
+  "eqChar#" to wrap2 { x: StgWord, y: StgWord -> StgInt(if (x.x == y.x) 1L else 0L) },
+  "neChar#" to wrap2 { x: StgWord, y: StgWord -> StgInt(if (x.x != y.x) 1L else 0L) },
+  "ltChar#" to wrap2 { x: StgWord, y: StgWord -> StgInt(if (x.x < y.x) 1L else 0L) },
+  "leChar#" to wrap2 { x: StgWord, y: StgWord -> StgInt(if (x.x <= y.x) 1L else 0L) },
 
-  "ord#" to wrap1 { x: StgChar -> StgInt(x.x.toLong()) }, // TODO: should this be an unsigned conversion?
+  "ord#" to wrap1 { x: StgWord -> StgInt(x.x.toLong()) }, // TODO: is this right?
 
   "catch#" to { object : StgPrimOp(3) {
     @field:Child var callWhnf1 = CallWhnf(1, false)
@@ -149,17 +151,80 @@ val primOps: Map<String, () -> StgPrimOp> = mapOf(
   "readMutVar#" to wrap2 { x: StgMutVar, _: VoidInh -> UnboxedTuple(arrayOf(x.x)) },
   "writeMutVar#" to wrap3 { x: StgMutVar, y: Any, v: VoidInh -> x.x = y; v },
 
-  "chr#" to wrap1 { x: StgInt -> StgChar(x.x.toInt()) }, // TODO: should this be an unsigned conversion?
+  "chr#" to wrap1 { x: StgInt -> StgWord(x.x.toULong()) }, // TODO: is this right?
 
   "int2Word#" to wrap1 { x: StgInt -> StgWord(x.x.toULong()) },
   "word2Int#" to wrap1 { x: StgWord -> StgInt(x.x.toLong()) },
   "narrow8Word#" to wrap1 { x: StgWord -> StgWord(x.x.toUByte().toULong()) },
   "narrow32Int#" to wrap1 { x: StgInt -> StgInt(x.x.toInt().toLong()) },
 
-  "leWord#" to wrap2 { x: StgWord, y: StgWord -> StgInt(if (x.x < y.x) 1L else 0L) },
+  "gtWord#" to wrap2 { x: StgWord, y: StgWord -> StgInt(if (x.x > y.x) 1L else 0L) },
+  "geWord#" to wrap2 { x: StgWord, y: StgWord -> StgInt(if (x.x >= y.x) 1L else 0L) },
   "eqWord#" to wrap2 { x: StgWord, y: StgWord -> StgInt(if (x.x == y.x) 1L else 0L) },
+  "neWord#" to wrap2 { x: StgWord, y: StgWord -> StgInt(if (x.x != y.x) 1L else 0L) },
+  "ltWord#" to wrap2 { x: StgWord, y: StgWord -> StgInt(if (x.x < y.x) 1L else 0L) },
+  "leWord#" to wrap2 { x: StgWord, y: StgWord -> StgInt(if (x.x <= y.x) 1L else 0L) },
+
+  "plusWord#" to wrap2 { x: StgWord, y: StgWord -> StgWord(x.x + y.x) },
+
   "minusWord#" to wrap2 { x: StgWord, y: StgWord -> StgWord(x.x - y.x) },
 
+  "timesWord#" to wrap2 { x: StgWord, y: StgWord -> StgWord(x.x * y.x) },
+
+  "int2Double#" to wrap1 { x: StgInt -> StgDouble(x.x.toDouble()) },
+
+  ">##" to wrap2 { x: StgDouble, y: StgDouble -> StgInt(if (x.x > y.x) 1L else 0L) },
+  ">=##" to wrap2 { x: StgDouble, y: StgDouble -> StgInt(if (x.x >= y.x) 1L else 0L) },
+  "==##" to wrap2 { x: StgDouble, y: StgDouble -> StgInt(if (x.x == y.x) 1L else 0L) },
+  "/=##" to wrap2 { x: StgDouble, y: StgDouble -> StgInt(if (x.x != y.x) 1L else 0L) },
+  "<##" to wrap2 { x: StgDouble, y: StgDouble -> StgInt(if (x.x < y.x) 1L else 0L) },
+  "<=##" to wrap2 { x: StgDouble, y: StgDouble -> StgInt(if (x.x <= y.x) 1L else 0L) },
+
+  "+##" to wrap2 { x: StgDouble, y: StgDouble -> StgDouble(x.x + y.x) },
+  "-##" to wrap2 { x: StgDouble, y: StgDouble -> StgDouble(x.x - y.x) },
+  "*##" to wrap2 { x: StgDouble, y: StgDouble -> StgDouble(x.x * y.x) },
+  "/##" to wrap2 { x: StgDouble, y: StgDouble -> StgDouble(x.x / y.x) },
+
+  "negateDouble#" to wrap1 { x: StgDouble -> StgDouble(-x.x) },
+  "fabsDouble#" to wrap1 { x: StgDouble -> StgDouble(x.x.absoluteValue) },
+
+  "sqrtDouble#" to wrap1 { x: StgDouble -> StgDouble(kotlin.math.sqrt(x.x)) },
+
+  "**##" to wrap2 { x: StgDouble, y: StgDouble -> StgDouble(x.x.pow(y.x)) },
+
+  // copied from __decodeDouble_2Int in rts/StgPrimFloat.c
+  "decodeDouble_2Int#" to wrap1 { x: StgDouble ->
+    val DMSBIT: UInt = 0x80000000U
+    val DHIGHBIT: UInt = 0x00100000U
+    val DMINEXP = java.lang.Double.MIN_EXPONENT - 53
+
+    val b = java.lang.Double.doubleToRawLongBits(x.x)
+
+    var low = b.toUInt()
+    var high = (b ushr 32).toUInt()
+
+    if (low == 0U && (high and DMSBIT.inv()) == 0U) {
+      UnboxedTuple(arrayOf(StgInt(0L), StgWord(0UL), StgWord(0UL), StgWord(0UL)))
+    } else {
+      var iexp = ((high shr 20) and 0x7ffU).toInt() + DMINEXP
+      val sign = high.toInt()
+
+      high = high and (DHIGHBIT - 1U)
+      if (iexp != DMINEXP) {
+        high = high or DHIGHBIT
+      } else {
+        iexp++
+        while (high and DHIGHBIT == 0U) {
+          println("$iexp $high $low")
+          high = high shl 1
+          if (low and DMSBIT != 0U) high++
+          low = low shl 1
+          iexp--
+        }
+      }
+      UnboxedTuple(arrayOf(StgInt(if (sign < 0) -1L else 1L), StgWord(high.toULong()), StgWord(low.toULong()), StgInt(iexp.toLong())))
+    }
+  },
 
   "tagToEnum#" to { object : StgPrimOp1() {
     // TODO: need to do this lazily because parent isn't set at initialization
@@ -210,8 +275,8 @@ val primOps: Map<String, () -> StgPrimOp> = mapOf(
   // TODO: make sure this is right (maybe should be unsigned)?
   "indexCharOffAddr#" to wrap2 { x: StgAddr, y: StgInt ->
     val off = x.offset + y.x.toInt()
-    if (off >= x.arr.size) { StgChar(0) }
-      else StgChar(x.arr[off].toInt()) },
+    if (off >= x.arr.size) { StgWord(0UL) }
+      else StgWord(x.arr[off].toUByte().toULong()) },
 
   "readInt8OffAddr#" to wrap3 { x: StgAddr, y: StgInt, _: VoidInh ->
     UnboxedTuple(arrayOf(StgInt(x[y.toInt()].toLong()))) },
@@ -228,9 +293,9 @@ val primOps: Map<String, () -> StgPrimOp> = mapOf(
   "writeWord8OffAddr#" to wrap4 { x: StgAddr, y: StgInt, z: StgWord, v: VoidInh -> x[y] = z.x.toByte(); v },
 
   "readWideCharOffAddr#" to wrap3 { x: StgAddr, y: StgInt, _: VoidInh ->
-    UnboxedTuple(arrayOf(StgChar(ByteBuffer.wrap(x.arr).getInt(x.offset+4*y.toInt())))) },
-  "writeWideCharOffAddr#" to wrap4 { x: StgAddr, y: StgInt, z: StgChar, v: VoidInh ->
-    x.arr.write(x.offset + 4*y.x.toInt(), z.x.toByteArray()); v },
+    UnboxedTuple(arrayOf(StgWord(ByteBuffer.wrap(x.arr).getInt(x.offset+4*y.toInt()).toUInt().toULong()))) },
+  "writeWideCharOffAddr#" to wrap4 { x: StgAddr, y: StgInt, z: StgWord, v: VoidInh ->
+    x.arr.write(x.offset + 4*y.x.toInt(), z.x.toUInt()); v },
 
   "writeWordArray#" to wrap4 { x: StgMutableByteArray, y: StgInt, z: StgWord, v: VoidInh ->
     x.arr.write(8*y.toInt(), z.x.toLong()); v },
@@ -249,6 +314,9 @@ val primOps: Map<String, () -> StgPrimOp> = mapOf(
   "uncheckedShiftRL#" to wrap2 { x: StgWord, y: StgInt -> StgWord(x.x shr y.x.toInt()) },
 
   "or#" to wrap2 { x: StgWord, y: StgWord -> StgWord(x.x or y.x) },
+  "and#" to wrap2 { x: StgWord, y: StgWord -> StgWord(x.x and y.x) },
+  "xor#" to wrap2 { x: StgWord, y: StgWord -> StgWord(x.x xor y.x) },
+  "not#" to wrap1 { x: StgWord -> StgWord(x.x.inv()) },
 
   // TODO?
   "touch#" to wrap2 { x: Any, y: VoidInh -> y },
@@ -259,8 +327,18 @@ val primOps: Map<String, () -> StgPrimOp> = mapOf(
     override fun run(frame: VirtualFrame, args: Array<Any>): Any = callWhnf.execute(frame, args[0], arrayOf())
   }},
 
-  "raise#" to wrap1 { e: Any -> throw HaskellException(e) },
-  "raiseIO#" to wrap2 { e: Any, _: VoidInh -> throw HaskellException(e) },
+  // TODO: make stack trace on throw a flag
+  // actually should store stack trace on the exception/in a weakhashmap & hijack exception printing
+  "raise#" to wrap1 { e: Any ->
+    println("$e thrown")
+    printStackTrace()
+    throw HaskellException(e)
+  },
+  "raiseIO#" to wrap2 { e: Any, _: VoidInh ->
+    println("$e thrown")
+    printStackTrace()
+    throw HaskellException(e)
+  },
 
   "newByteArray#" to wrap2 { x: StgInt, _: VoidInh ->
     UnboxedTuple(arrayOf(StgMutableByteArray(ByteArray(x.toInt()))))

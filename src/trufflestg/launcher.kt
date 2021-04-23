@@ -118,7 +118,8 @@ class Launcher : AbstractLanguageLauncher() {
       }
     }
 
-    polyglotOptions["engine.TraceCompilation"] = "true"
+    // polyglotOptions["engine.TraceCompilation"] = "true"
+
     // TODO: maybe benchmark these?
     // but my guess is that these don't help much if at all & they make graphs bigger
     // on native-image EE, they might be neccesary for good calling convention

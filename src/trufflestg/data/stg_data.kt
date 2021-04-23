@@ -39,10 +39,11 @@ data class StgInt(@JvmField val x: Long) {
   operator fun compareTo(y: StgInt): Int = x.compareTo(y.x)
 }
 @CompilerDirectives.ValueType
-data class StgWord(@JvmField val x: ULong)
-// TODO: should x be UInt?
+data class StgWord(@JvmField val x: ULong) {
+  fun asChar(): Int = x.toInt()
+}
 @CompilerDirectives.ValueType
-data class StgChar(@JvmField val x: Int)
+data class StgDouble(@JvmField val x: Double) {}
 
 // for now an Addr# is an offset into an array
 // TODO: make arr private & add more methods to avoid errors

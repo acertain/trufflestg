@@ -33,9 +33,10 @@ fun Stg.Arg.compile(ci: CompileInfo, fd: FrameDescriptor): Arg = when (this) {
   is Stg.Arg.StgVarArg -> x.compile(ci, fd)
 }
 
+@OptIn(ExperimentalUnsignedTypes::class)
 fun Stg.Lit.compile(): Any = when (this) {
-  is Stg.Lit.LitChar -> StgChar(x.codePointAt(0))
-  is Stg.Lit.LitDouble -> TODO()
+  is Stg.Lit.LitChar -> StgWord(x.codePointAt(0).toUInt().toULong())
+  is Stg.Lit.LitDouble -> StgDouble(x.x.toDouble() / x.y) // TODO: i guess????
   is Stg.Lit.LitFloat -> TODO()
   is Stg.Lit.LitLabel -> TODO()
   is Stg.Lit.LitNullAddr -> NullAddr
@@ -310,14 +311,15 @@ class CborModuleDir(
   val language: Language,
   val path: String
 ) {
+  // TODO: key also by UnitId
   val loadedModules: MutableMap<String,Module> = mutableMapOf()
 
   operator fun get(name: String): Module? {
     if (name in loadedModules) return loadedModules[name]
     val mpath = path + name
-    print("loading $mpath... ")
+//    print("loading $mpath... ")
     val c = readModule(mpath)
-    println("done")
+//    println("done")
     val m = Module(language, this, c)
     loadedModules[name] = m
     return m
