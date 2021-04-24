@@ -364,26 +364,12 @@ class Stg {
   )
 }
 
-@OptIn(ExperimentalStdlibApi::class)
+@OptIn(ExperimentalStdlibApi::class, ExperimentalUnsignedTypes::class)
 fun readModule(path: String): Stg.Module {
   val f = ByteBuffer.wrap(File(path).readBytes())
   val c = Cbor(decodeCbor(f))
   return deserializeCbor(typeOf<Stg.Module>(), c) as Stg.Module
 }
-
-@ExperimentalStdlibApi
-@ExperimentalUnsignedTypes
-fun main() {
-  val path="/data/Code/ghc-whole-program-compiler-project/ghc.truffleghc/"
-  val mod=path+"Main"
-
-  val x = readModule(mod)
-
-  print(x)
-
-
-}
-
 
 
 

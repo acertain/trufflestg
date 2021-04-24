@@ -29,9 +29,8 @@ private fun assembleThrow(asm: Block, exceptionType: Type) = asm.run {
   athrow
 }
 
-fun ClassNode.frameBody(signature: String, superCls: Type = type(Object::class)) {
+fun ClassNode.frameBody(types: Array<FieldInfo>, superCls: Type = type(Object::class)) {
   interfaces = mutableListOf(type(DataFrame::class).internalName)
-  val types = signature.map { FieldInfo.of(it) }.toTypedArray()
   val N = types.size
   val members = types.indices.map { "_$it" }.toTypedArray()
 
@@ -85,17 +84,17 @@ fun ClassNode.frameBody(signature: String, superCls: Type = type(Object::class))
   for (i in types.indices)
     field(public and final,types[i].type,members[i])
 
-  constructor(public, parameterTypes = *types.map{it.type}.toTypedArray()) {
-    asm.`return` {
-      aload_0
-      invokespecial(superCls, void, "<init>")
-      for (i in types.indices) {
-        aload_0
-        types[i].load(this, i+1)
-        putfield(type, members[i], types[i].type)
-      }
-    }
-  }
+//  constructor(public, parameterTypes = *types.map{it.type}.toTypedArray()) {
+//    asm.`return` {
+//      aload_0
+//      invokespecial(superCls, void, "<init>")
+//      for (i in types.indices) {
+//        aload_0
+//        types[i].load(this, i+1)
+//        putfield(type, members[i], types[i].type)
+//      }
+//    }
+//  }
 
   constructor(public, parameterTypes = *arrayOf(`object`.array)) {
     asm.`return` {
@@ -110,7 +109,9 @@ fun ClassNode.frameBody(signature: String, superCls: Type = type(Object::class))
         aload_0
         aload_1
         iload_2
-        types[i].aload(this)
+        aaload
+        checkcast(+types[i].klass)
+        types[i].unbox(this)
         putfield(type, members[i], types[i].type)
         iinc(2)
       }
@@ -163,7 +164,7 @@ fun ClassNode.frameBody(signature: String, superCls: Type = type(Object::class))
 
 // TODO: add CompilerDirectives.ValueType to the generated class
 fun frame(signature: String, name: String) : ByteArray = `class`(public,name) {
-  frameBody(signature)
+  frameBody(signature.map { FieldInfo.of(it) }.toTypedArray())
 }
 
 val child: AnnotationNode get() = annotationNode(+Node.Child::class)

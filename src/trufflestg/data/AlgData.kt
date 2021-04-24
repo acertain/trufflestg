@@ -190,13 +190,27 @@ class DynamicClassDataConInfo(
     if (klass!!.isInstance(x)) CompilerDirectives.castExact(x, klass) else null
 
   // TODO: unbox fields, and set field type when we know it can't be a thunk (bang patterns)
-  // ghc might not be telling us about bang patterns though :(
+  // ghc-wpc isn't telling us about bang patterns though :(
+  // maybe could look at worker type?
   private val klass: Class<DataCon>? = if (size == 0) null else run {
     // TODO: better mangling
     fun mangle(x: String) = x.replace("""[\[\]]""".toRegex(), "_")
     val nm = mangle("trufflestg.types.${name.unitId}.${name.module}.${type.name.name}.${name.name}")
     val nm2 = nm.replace('.','/')
-    val sig = "O".repeat(size)
+    val sig: Array<FieldInfo> = when (src.rep) {
+      is Stg.DataConRep.UnboxedTupleCon -> Array(src.rep.x) { objectFieldInfo }
+        // TODO:
+        // panic("attempt to build an unboxed tuple data con?")
+      is Stg.DataConRep.AlgDataCon -> src.rep.x.map { when (it) {
+        is Stg.PrimRep.IntRep -> stgIntFieldInfo
+        is Stg.PrimRep.WordRep -> stgWordFieldInfo
+        is Stg.PrimRep.LiftedRep -> objectFieldInfo
+        else -> {
+//          println("todo PrimRep $it")
+          objectFieldInfo
+        }
+      } }.toTypedArray()
+    }
     val kls = `class`(public, nm2) {
       superName = "trufflestg/data/DataCon"
       frameBody(sig, type(DataCon::class))
@@ -208,9 +222,12 @@ class DynamicClassDataConInfo(
     }.loadClass(nm) { when (it) {
       "trufflestg.data.DataCon" -> DataCon::class.java
       "trufflestg.data.DataConInfo" -> DataConInfo::class.java
+      "trufflestg.data.StgInt" -> StgInt::class.java
+      "trufflestg.data.StgWord" -> StgWord::class.java
       else -> TODO(it)
     }}
 
+    // TODO: figure out a better way to do this (set _info = this for kls)
     val field = kls.getDeclaredField("_info")
     field.set(null, this)
     val modifiers = Field::class.java.getDeclaredField("modifiers")

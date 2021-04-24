@@ -37,10 +37,16 @@ data class FullName(
 data class StgInt(@JvmField val x: Long) {
   fun toInt(): Int = x.toInt()
   operator fun compareTo(y: StgInt): Int = x.compareTo(y.x)
+
+  fun unbox(): Long = x
+  companion object { @JvmStatic fun box(x: Long): StgInt = StgInt(x) }
 }
 @CompilerDirectives.ValueType
 data class StgWord(@JvmField val x: ULong) {
   fun asChar(): Int = x.toInt()
+
+  fun unbox(): Long = x.toLong()
+  companion object { @JvmStatic fun box(x: Long): StgWord = StgWord(x.toULong()) }
 }
 @CompilerDirectives.ValueType
 data class StgDouble(@JvmField val x: Double) {}
