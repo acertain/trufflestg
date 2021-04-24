@@ -12,8 +12,8 @@ import trufflestg.array_utils.map
 // TODO:
 //interface Builder<T> { fun build(xs: Array<Any>): T }
 
-
 interface DataFrameBuilder { fun build(xs: Array<Any>): DataFrame }
+
 fun factory(cls: Class<DataFrame>): ByteArray = `class`(
   public and final, "${cls.name}Builder".replace('.','/')) {
   interfaces = mutableListOf(type(DataFrameBuilder::class).internalName)

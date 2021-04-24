@@ -68,38 +68,13 @@ class ZeroArgDataCon(
 ) : DataCon() {
   override fun getInfo() = _info
 
-  override fun isDouble(slot: Slot): Boolean = false
-  override fun isFloat(slot: Slot): Boolean = false
-  override fun isInteger(slot: Slot): Boolean = false
-  override fun isLong(slot: Slot): Boolean = false
-  override fun isObject(slot: Slot): Boolean = false
-
   override fun getValue(slot: Int) {
-    CompilerDirectives.transferToInterpreter()
-    throw IndexOutOfBoundsException()
-  }
-  override fun getDouble(slot: Slot): Double {
-    CompilerDirectives.transferToInterpreter()
-    throw IndexOutOfBoundsException()
-  }
-  override fun getFloat(slot: Slot): Float {
-    CompilerDirectives.transferToInterpreter()
-    throw IndexOutOfBoundsException()
-  }
-  override fun getInteger(slot: Slot): Int {
-    CompilerDirectives.transferToInterpreter()
-    throw IndexOutOfBoundsException()
-  }
-  override fun getLong(slot: Slot): Long {
-    CompilerDirectives.transferToInterpreter()
-    throw IndexOutOfBoundsException()
-  }
-  override fun getObject(slot: Slot): Any? {
     CompilerDirectives.transferToInterpreter()
     throw IndexOutOfBoundsException()
   }
 }
 
+// TODO: use ArrayMappedDataFrame?
 class ArrayDataCon(
   val _info: DataConInfo,
   val tag: Int,
@@ -107,17 +82,6 @@ class ArrayDataCon(
 ): DataCon() {
   override fun getInfo(): DataConInfo = _info
   override fun getValue(slot: Slot): Any? = args[slot]
-  override fun getObject(slot: Slot): Any? = args[slot]
-  override fun isObject(slot: Slot): Boolean = true
-
-  override fun getDouble(slot: Slot): Double = throw FrameSlotTypeException()
-  override fun isDouble(slot: Slot): Boolean = false
-  override fun getFloat(slot: Slot): Float = throw FrameSlotTypeException()
-  override fun isFloat(slot: Slot): Boolean = false
-  override fun getInteger(slot: Slot): Int = throw FrameSlotTypeException()
-  override fun isInteger(slot: Slot): Boolean = false
-  override fun getLong(slot: Slot): Long = throw FrameSlotTypeException()
-  override fun isLong(slot: Slot): Boolean = false
 }
 
 abstract class DataConInfo(
