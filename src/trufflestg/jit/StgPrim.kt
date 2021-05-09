@@ -12,7 +12,6 @@ import trufflestg.array_utils.write
 import trufflestg.data.*
 import trufflestg.panic
 import trufflestg.todo
-import java.nio.ByteBuffer
 import kotlin.math.absoluteValue
 import kotlin.math.pow
 
@@ -32,8 +31,9 @@ class StgPrim(
     val xs = args(frame)
     if (opNode != null) {
       if (args.size != opNode!!.arity) panic{"StgPrim $op bad arity"}
+//      print("${(rootNode as ClosureRootNode).toString()} $op ${xs.contentToString()} ")
       val x = opNode!!.run(frame, xs)
-      // println("$op ${xs.contentToString()} = $x")
+//      println("= $x")
       return x
     }
     panic{"$op nyi"}
@@ -79,11 +79,12 @@ val primOps: Map<String, () -> StgPrimOp> = mapOf(
   "-#" to wrap2 { x: StgInt, y: StgInt -> StgInt(x.x - y.x) },
   "negateInt#" to wrap1 { x: StgInt -> StgInt(-x.x) },
   "*#" to wrap2 { x: StgInt, y: StgInt -> StgInt(x.x * y.x) },
-  "<=#" to wrap2 { x: StgInt, y: StgInt -> StgInt(if (x.x <= y.x) 1L else 0L) },
   ">#" to wrap2 { x: StgInt, y: StgInt -> StgInt(if (x.x > y.x) 1L else 0L) },
-  "<#" to wrap2 { x: StgInt, y: StgInt -> StgInt(if (x.x < y.x) 1L else 0L) },
   ">=#" to wrap2 { x: StgInt, y: StgInt -> StgInt(if (x.x >= y.x) 1L else 0L) },
   "==#" to wrap2 { x: StgInt, y: StgInt -> StgInt(if (x.x == y.x) 1L else 0L) },
+  "/=#" to wrap2 { x: StgInt, y: StgInt -> StgInt(if (x.x != y.x) 1L else 0L) },
+  "<#" to wrap2 { x: StgInt, y: StgInt -> StgInt(if (x.x < y.x) 1L else 0L) },
+  "<=#" to wrap2 { x: StgInt, y: StgInt -> StgInt(if (x.x <= y.x) 1L else 0L) },
 
   "andI#" to wrap2 { x: StgInt, y: StgInt -> StgInt(x.x and y.x) },
   "orI#" to wrap2 { x: StgInt, y: StgInt -> StgInt(x.x or y.x) },
@@ -106,9 +107,9 @@ val primOps: Map<String, () -> StgPrimOp> = mapOf(
     ), StgInt(hi), StgInt(lo)))
   },
 
-  "quotRemInt#" to wrap2 { x: StgInt, y: StgInt ->
-    UnboxedTuple(arrayOf(StgInt(x.x / y.x), StgInt(x.x % y.x)))
-  },
+  "quotInt#" to wrap2 { x: StgInt, y: StgInt -> StgInt(x.x / y.x) },
+  "remInt#" to wrap2 { x: StgInt, y: StgInt -> StgInt(x.x % y.x) },
+  "quotRemInt#" to wrap2 { x: StgInt, y: StgInt -> UnboxedTuple(arrayOf(StgInt(x.x / y.x), StgInt(x.x % y.x))) },
 
   "newMVar#" to wrap1 { _: VoidInh -> UnboxedTuple(arrayOf(StgMVar(false, null))) },
   "putMVar#" to wrap3 { x: StgMVar, y: Any, z: VoidInh ->
@@ -127,8 +128,22 @@ val primOps: Map<String, () -> StgPrimOp> = mapOf(
   "newArray#" to wrap3 { x: StgInt, y: Any, _: VoidInh -> UnboxedTuple(arrayOf(StgArray(Array(x.toInt()) { y }))) },
   "readArray#" to wrap3 { x: StgArray, y: StgInt, _: VoidInh -> UnboxedTuple(arrayOf(x[y])) },
   "writeArray#" to wrap4 { x: StgArray, y: StgInt, z: Any, w: VoidInh -> x[y] = z; w },
+  "sizeofArray#" to wrap1 { x: StgArray -> StgInt(x.arr.size.toLong()) },
+  "sizeofMutableArray#" to wrap1 { x: StgArray -> StgInt(x.arr.size.toLong()) },
+  "indexArray#" to wrap2 { x: StgArray, y: StgInt -> UnboxedTuple(arrayOf(x[y])) },
+  "unsafeFreezeArray#" to wrap2 { arr: StgArray, _: VoidInh -> UnboxedTuple(arrayOf(arr)) },
 
-  "eqAddr#" to wrap2 { x: Any, y: Any -> StgInt(if (x === y) 1L else 0L) },
+
+  "eqAddr#" to wrap2 { x: Any, y: Any ->
+    StgInt(if (when (x) {
+      is StgAddr -> y is StgAddr && x == y
+      is StablePtr -> y is StablePtr && x === y
+      else -> panic{"eqAddr# of $x and $y"}
+    }) 1L else 0L)
+  },
+
+  // TODO: is this sufficient?
+  "reallyUnsafePtrEquality#" to wrap2 { x: Any, y: Any -> StgInt(if (x === y) 1L else 0L) },
 
   "myThreadId#" to wrap1 { _: VoidInh -> UnboxedTuple(arrayOf(ThreadId(Thread.currentThread().id))) },
 
@@ -156,6 +171,7 @@ val primOps: Map<String, () -> StgPrimOp> = mapOf(
   "int2Word#" to wrap1 { x: StgInt -> StgWord(x.x.toULong()) },
   "word2Int#" to wrap1 { x: StgWord -> StgInt(x.x.toLong()) },
   "narrow8Word#" to wrap1 { x: StgWord -> StgWord(x.x.toUByte().toULong()) },
+  "narrow32Word#" to wrap1 { x: StgWord -> StgWord(x.x.toUInt().toULong()) },
   "narrow32Int#" to wrap1 { x: StgInt -> StgInt(x.x.toInt().toLong()) },
 
   "gtWord#" to wrap2 { x: StgWord, y: StgWord -> StgInt(if (x.x > y.x) 1L else 0L) },
@@ -164,6 +180,8 @@ val primOps: Map<String, () -> StgPrimOp> = mapOf(
   "neWord#" to wrap2 { x: StgWord, y: StgWord -> StgInt(if (x.x != y.x) 1L else 0L) },
   "ltWord#" to wrap2 { x: StgWord, y: StgWord -> StgInt(if (x.x < y.x) 1L else 0L) },
   "leWord#" to wrap2 { x: StgWord, y: StgWord -> StgInt(if (x.x <= y.x) 1L else 0L) },
+
+  "clz#" to wrap1 { x: StgWord -> StgWord(java.lang.Long.numberOfLeadingZeros(x.x.toLong()).toULong()) },
 
   "plusWord#" to wrap2 { x: StgWord, y: StgWord -> StgWord(x.x + y.x) },
 
@@ -261,7 +279,7 @@ val primOps: Map<String, () -> StgPrimOp> = mapOf(
         }
       }
       // TODO: profile which cons we've seen?
-      // TODO: do a virtual call to getInfo().tag for big types?
+      // TODO: do a virtual call to getInfo().tag / getTag() for big types?
       ty.cons.forEachIndexed { ix, c ->
         if (c.size != 0) {
           if (c.tryIs(x) !== null) { return StgInt(ix.toLong()) }
@@ -271,40 +289,46 @@ val primOps: Map<String, () -> StgPrimOp> = mapOf(
     }
   } },
 
+  // TODO: make all prims & fcalls taking a StgAddr have a cache or such
+  // should decide if i want to use TruffleLibrary or do it myself
+  // maybe just use is & as to impl the prims?
+
   // just reads a byte
-  // TODO: make sure this is right (maybe should be unsigned)?
-  "indexCharOffAddr#" to wrap2 { x: StgAddr, y: StgInt ->
-    val off = x.offset + y.x.toInt()
-    if (off >= x.arr.size) { StgWord(0UL) }
-      else StgWord(x.arr[off].toUByte().toULong()) },
+  "indexCharOffAddr#" to wrap2 { x: StgAddr, y: StgInt -> when (x) {
+    is StgAddr.StgArrayOffsetAddr -> {
+      val off = x.offset + y.x.toInt()
+      if (off >= x.arr.size) { StgWord(0UL) }
+      else StgWord(x.arr[off].toUByte().toULong())
+    }
+    is StgAddr.StgFFIAddr -> StgWord(x.readByte(y.toInt()).toUByte().toULong())
+  } },
 
   "readInt8OffAddr#" to wrap3 { x: StgAddr, y: StgInt, _: VoidInh ->
-    UnboxedTuple(arrayOf(StgInt(x[y.toInt()].toLong()))) },
+    UnboxedTuple(arrayOf(StgInt(x.readByte(y.toInt()).toLong()))) },
   "readInt32OffAddr#" to wrap3 { x: StgAddr, y: StgInt, _: VoidInh ->
-    UnboxedTuple(arrayOf(StgInt(ByteBuffer.wrap(x.arr).getInt(x.offset+4*y.toInt()).toLong()))) },
+    UnboxedTuple(arrayOf(StgInt(x.readInt(4*y.toInt()).toLong()))) },
   "readWord8OffAddr#" to wrap3 { x: StgAddr, y: StgInt, _: VoidInh ->
-    UnboxedTuple(arrayOf(StgWord(x[y.toInt()].toULong()))) },
-  "readAddrOffAddr#" to wrap3 { x: StgAddr, y: StgInt, _: VoidInh ->
-    val l = ByteBuffer.wrap(x.arr).getLong(x.offset + 8*y.toInt()).toInt()
-    // FIXME: need to not have globalHeap reallocate...
-    val w = StgAddr(globalHeap, l)
-    UnboxedTuple(arrayOf(w))
-  },
-  "writeWord8OffAddr#" to wrap4 { x: StgAddr, y: StgInt, z: StgWord, v: VoidInh -> x[y] = z.x.toByte(); v },
+    UnboxedTuple(arrayOf(StgWord(x.readByte(y.toInt()).toUByte().toULong()))) },
+  "readWord32OffAddr#" to wrap3 { x: StgAddr, y: StgInt, _: VoidInh ->
+    UnboxedTuple(arrayOf(StgWord(x.readInt(4*y.toInt()).toUInt().toULong()))) },
+
+  "writeWord8OffAddr#" to wrap4 { x: StgAddr, y: StgInt, z: StgWord, v: VoidInh -> x.writeByte(y.toInt(), z.x.toByte()); v },
+
+  "readAddrOffAddr#" to wrap3 { x: StgAddr, y: StgInt, _: VoidInh -> UnboxedTuple(arrayOf(StgAddr.StgFFIAddr(x.readLong(8*y.toInt())))) },
 
   "readWideCharOffAddr#" to wrap3 { x: StgAddr, y: StgInt, _: VoidInh ->
-    UnboxedTuple(arrayOf(StgWord(ByteBuffer.wrap(x.arr).getInt(x.offset+4*y.toInt()).toUInt().toULong()))) },
+    UnboxedTuple(arrayOf(StgWord(x.readInt(4*y.toInt()).toUInt().toULong()))) },
   "writeWideCharOffAddr#" to wrap4 { x: StgAddr, y: StgInt, z: StgWord, v: VoidInh ->
-    x.arr.write(x.offset + 4*y.x.toInt(), z.x.toUInt()); v },
+    x.writeInt(4*y.toInt(), z.x.toInt()); v },
 
-  "writeWordArray#" to wrap4 { x: StgMutableByteArray, y: StgInt, z: StgWord, v: VoidInh ->
-    x.arr.write(8*y.toInt(), z.x.toLong()); v },
+  "writeWordArray#" to wrap4 { x: StgByteArray, y: StgInt, z: StgWord, v: VoidInh ->
+    x.asAddr().writeLong(8*y.toInt(), z.x.toLong()); v },
 
-  "indexWordArray#" to wrap2 { x: StgMutableByteArray, y: StgInt ->
-    StgWord(x.asBuffer().getLong(y.toInt()*8).toULong())
+  "indexWordArray#" to wrap2 { x: StgByteArray, y: StgInt ->
+    StgWord(x.asAddr().readLong(y.toInt()*8).toULong())
   },
 
-  "plusAddr#" to wrap2 { x: StgAddr, y: StgInt -> StgAddr(x.arr, x.offset + y.x.toInt()) },
+  "plusAddr#" to wrap2 { x: StgAddr, y: StgInt -> x.addOffset(y.toInt()) },
 
   // TODO: make sure these are right
   "uncheckedIShiftL#" to wrap2 { x: StgInt, y: StgInt -> StgInt(x.x shl y.x.toInt()) },
@@ -341,24 +365,29 @@ val primOps: Map<String, () -> StgPrimOp> = mapOf(
   },
 
   "newByteArray#" to wrap2 { x: StgInt, _: VoidInh ->
-    UnboxedTuple(arrayOf(StgMutableByteArray(ByteArray(x.toInt()))))
+    UnboxedTuple(arrayOf(StgByteArray.StgJvmByteArray(ByteArray(x.toInt()))))
   },
-  // TODO: actually pin & align? only matters if we want to use native code
-  // FIXME: or for readAddrOffAddr, or if casted to Addr?
+  // TODO: possibly could avoid pinning here (do it lazily) when the jvm supports pinning itself
+  // FIXME: also might need to pin for readAddrOffAddr, or if casted to Addr?
   "newAlignedPinnedByteArray#" to wrap3 { x: StgInt, alignment: StgInt, _: VoidInh ->
-    UnboxedTuple(arrayOf(StgMutableByteArray(ByteArray(x.toInt())))) },
+    UnboxedTuple(arrayOf(StgByteArray.StgPinnedByteArray(x.x))) },
   "newPinnedByteArray#" to wrap2 { x: StgInt, _: VoidInh ->
-    UnboxedTuple(arrayOf(StgMutableByteArray(ByteArray(x.toInt())))) },
-  "unsafeFreezeByteArray#" to wrap2 { arr: StgMutableByteArray, _: VoidInh ->
-    arr.frozen = true
-    UnboxedTuple(arrayOf(arr)) },
-  "byteArrayContents#" to wrap1 { arr: StgMutableByteArray -> StgAddr(arr.arr, 0) },
+    UnboxedTuple(arrayOf(StgByteArray.StgPinnedByteArray(x.x))) },
+  "unsafeFreezeByteArray#" to wrap2 { arr: StgByteArray, _: VoidInh -> UnboxedTuple(arrayOf(arr)) },
+  "byteArrayContents#" to wrap1 { arr: StgByteArray -> when (arr) {
+    is StgByteArray.StgJvmByteArray -> StgAddr.StgArrayOffsetAddr(arr.arr, 0)
+    is StgByteArray.StgPinnedByteArray -> StgAddr.StgFFIAddr(arr.addr)
+  } },
 
-  "sizeofByteArray#" to wrap1 { x: StgMutableByteArray -> StgInt(x.arr.size.toLong()) }
+  "sizeofByteArray#" to wrap1 { x: StgByteArray -> StgInt(when (x) {
+    is StgByteArray.StgJvmByteArray -> x.arr.size.toLong()
+    is StgByteArray.StgPinnedByteArray -> x.len
+  }) }
 )
 
 
 // this makes a class per call site
+// TODO: maybe use castExact here?
 inline fun <reified X, reified Y : Any> wrap1(crossinline f: (X) -> Y): () -> StgPrimOp = {
   object : StgPrimOp1() { override fun execute(x: Any): Any = f((x as? X)!!) }
 }

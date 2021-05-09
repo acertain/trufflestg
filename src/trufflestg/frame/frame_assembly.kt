@@ -45,7 +45,6 @@ fun ClassNode.frameBody(types: Array<FieldInfo>, superCls: Type = type(Object::c
       iconst_0
       istore_2
 
-      // FIXME: is this wrong? i think it needs to unbox? (only works for object as is?)
       for (i in types.indices) {
         aload_0
         aload_1

@@ -1,6 +1,6 @@
 **/*.iml
 **/.idea
-**/build/*
+build/*
 **/dist-newstyle/**
 **/dist/**
 *.ipr

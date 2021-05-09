@@ -1,7 +1,9 @@
+@file:Suppress("JAVA_MODULE_DOES_NOT_EXPORT_PACKAGE")
 package trufflestg.jit
 
 import com.oracle.truffle.api.CompilerDirectives
 import com.oracle.truffle.api.TruffleStackTrace
+import com.oracle.truffle.api.dsl.Specialization
 import com.oracle.truffle.api.exception.AbstractTruffleException
 import com.oracle.truffle.api.frame.VirtualFrame
 import com.oracle.truffle.api.interop.ExceptionType
@@ -9,26 +11,147 @@ import com.oracle.truffle.api.interop.InteropLibrary
 import com.oracle.truffle.api.library.ExportLibrary
 import com.oracle.truffle.api.library.ExportMessage
 import com.oracle.truffle.api.nodes.Node
+import com.oracle.truffle.api.source.Source
+import jdk.internal.vm.annotation.Stable
 import trufflestg.Language
-import trufflestg.array_utils.*
+import trufflestg.array_utils.map
 import trufflestg.data.*
 import trufflestg.panic
+import trufflestg.stg.CborModuleDir
 import trufflestg.stg.Stg
+import java.io.File
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 import java.security.MessageDigest
 
+
+fun getNFIType(x: Any): String = when (x) {
+  is StgAddr.StgFFIAddr -> "POINTER"
+  // FIXME: deal with Int8 etc somehow
+  is StgWord -> "UINT64"
+  is StgInt -> "SINT64"
+  else -> TODO("getNFIType $x")
+//  is TruffleObject -> when {
+//    InteropLibrary.isNumber(x) -> when {}
+//    else -> null
+//  }
+//  else -> null
+}
+
+fun Stg.PrimRep?.asNFIType(): String = when(this) {
+  is Stg.PrimRep.AddrRep -> "POINTER"
+  is Stg.PrimRep.IntRep -> "SINT64"
+  is Stg.PrimRep.WordRep -> "UINT64"
+  else -> TODO("$this asNFIType()")
+}
+
+fun dlopen(str: String): Any {
+//  println("dlopen $str")
+  val ctx = Language.currentContext().env
+  val src = Source.newBuilder("nfi", "load (RTLD_GLOBAL) \"${str}\"", "(haskell ffi call)").build()
+  return ctx.parseInternal(src).call()
+}
+
+@CompilerDirectives.CompilationFinal var rtsLoaded: Boolean = false
+fun loadRts() {
+  if (!rtsLoaded) {
+    CompilerDirectives.transferToInterpreterAndInvalidate()
+    rtsLoaded = true
+
+    val libName = System.mapLibraryName("rts")
+
+    val libFile = File.createTempFile("trufflestg-rts",libName)
+    libFile.deleteOnExit()
+
+    println("Module: ${StgFCall::class.java.module}")
+
+    val s = StgFCall::class.java.getResourceAsStream("/$libName")
+    if (s === null) {
+      throw Exception("Can't find $libName: maybe trufflestg doesn't support ffi calls on your OS?")
+    }
+    Files.copy(s, libFile.toPath(), StandardCopyOption.REPLACE_EXISTING)
+
+    println(libFile.path)
+    dlopen(libFile.path)
+    dlopen("/home/zcarterc/Sync/Code/cadenza/src/c/librts.so")
+  }
+}
+
+
+
+val realFFICalls: MutableSet<String> = mutableSetOf()
+
 class StgFCall(
+  val type: Stg.Type,
   val x: Stg.ForeignCall,
   @field:Children val args: Array<Arg>
 ) : Code(null) {
   val name: String = (x.ctarget as Stg.CCallTarget.StaticTarget).string
-  @field:Child var opNode: StgPrimOp? = primFCalls[name]?.let { it() }
+  @Child var opNode: StgPrimOp? = primFCalls[name]?.let { it() }
+  @Child var realFCall: StgRealFCall? = if (opNode === null) StgRealFCall(type, x) else null
 
   override fun execute(frame: VirtualFrame): Any {
     val xs = map(args) { it.execute(frame) }
-    if (opNode != null) {
-      return opNode!!.run(frame, xs)
+    return if (opNode != null) {
+      opNode!!.run(frame, xs)
     } else {
-      panic{"foreign call nyi $x ${xs.contentToString()}"}
+      realFCall!!.execute(xs)
+    }
+  }
+}
+
+class StgRealFCall(
+  val type: Stg.Type,
+  val x: Stg.ForeignCall
+) : Node() {
+  val name: String = (x.ctarget as Stg.CCallTarget.StaticTarget).string
+  private val retType: Stg.PrimRep? = when (type) {
+    is Stg.Type.UnboxedTuple -> when (type.rep.size) {
+      0 -> null
+      1 -> type.rep[0]
+      else -> panic{"foreign call $x $type returning a multiple element unboxed tuple"}
+    }
+    is Stg.Type.PolymorphicRep -> panic("foreign call without known return kind")
+    is Stg.Type.SingleValue -> type.rep
+  }
+
+  // TODO: should limit be 1?
+  @Child var interop: InteropLibrary = InteropLibrary.getFactory().createDispatched(1)
+
+  @CompilerDirectives.CompilationFinal var boundFn: Any? = null
+
+  fun execute(xs: Array<Any>): Any {
+    val ys = xs.dropLast(1).toTypedArray()
+    if (boundFn === null) {
+      CompilerDirectives.transferToInterpreterAndInvalidate()
+
+      if (name !in realFFICalls) {
+        realFFICalls.add(name)
+        println("trufflestg: new real ffi call: $name $x ${xs.contentToString()}")
+      }
+
+      loadRts()
+      val lib = (rootNode as ClosureRootNode).module.moduleDir.nativeLib()
+
+      val interopSlow = InteropLibrary.getUncached()
+      val fn = interopSlow.readMember(lib, name)
+
+      if (xs.last() !is VoidInh) {
+        panic { "foreign call with non-RealWorld last argument, TODO" }
+      }
+
+      val tyString = "(${ys.joinToString(",") { getNFIType(it) }}):${retType.asNFIType()}"
+      boundFn = interopSlow.invokeMember(fn, "bind", tyString)
+    }
+
+    val r = interop.execute(boundFn, *ys)
+    return when (retType) {
+      is Stg.PrimRep.AddrRep -> UnboxedTuple(arrayOf(StgAddr.StgFFIAddr(interop.asPointer(r))))
+      is Stg.PrimRep.IntRep -> UnboxedTuple(arrayOf(StgInt(interop.asLong(r))))
+      is Stg.PrimRep.WordRep -> UnboxedTuple(arrayOf(StgWord(interop.asLong(r).toULong()))) // TODO: is this right?
+      else -> {
+        panic{"foreign call return nyi $x ${xs.contentToString()} $retType"}
+      }
     }
   }
 }
@@ -54,14 +177,40 @@ class TruffleStgExitException(val status: Int) : AbstractTruffleException() {
 
 // mutable state
 var md5: MessageDigest? = null
-object GlobalStore {
-  var GHCConcSignalSignalHandlerStore: Any? = null
-}
-var globalHeap = ByteArray(0)
 
+val GlobalStore: MutableMap<String, StablePtr> = mutableMapOf()
 
-@OptIn(kotlin.ExperimentalUnsignedTypes::class)
-val primFCalls: Map<String, () -> StgPrimOp> = mapOf(
+@OptIn(ExperimentalUnsignedTypes::class)
+val primFCalls: Map<String, () -> StgPrimOp> =
+  listOf(
+    "GHCConcSignalSignalHandlerStore",
+    "GHCConcWindowsPendingDelaysStore",
+    "GHCConcWindowsIOManagerThreadStore",
+    "GHCConcWindowsProddingStore",
+    "SystemEventThreadEventManagerStore",
+    "SystemEventThreadIOManagerThreadStore",
+    "SystemTimerThreadEventManagerStore",
+    "SystemTimerThreadIOManagerThreadStore",
+    "LibHSghcFastStringTable",
+    "LibHSghcPersistentLinkerState",
+    "LibHSghcInitLinkerDone",
+    "LibHSghcGlobalDynFlags",
+    "LibHSghcStaticOptions",
+    "LibHSghcStaticOptionsReady",
+    "MaxStoreKey"
+  ).associate {
+    ("getOrSet$it") to wrap2 { a: StablePtr, _: VoidInh ->
+      synchronized(GlobalStore) {
+        val x = GlobalStore[it]
+        UnboxedTuple(arrayOf(if (x === null) {
+          GlobalStore[it] = a
+          a
+        } else {
+          x
+        }))
+      }
+    }
+  } + mapOf(
   // TODO: do something safer! (use x to store MessageDigest object?)
   "__hsbase_MD5Init" to wrap2Boundary { x: StgAddr, y: VoidInh ->
     if (md5 != null) panic("")
@@ -69,63 +218,64 @@ val primFCalls: Map<String, () -> StgPrimOp> = mapOf(
     y
   },
   "__hsbase_MD5Update" to wrap4 { _: StgAddr, y: StgAddr, z: StgInt, v: VoidInh ->
-    val c = y.arr.copyOfRange(y.offset, y.offset + z.x.toInt())
+    val c = y.getRange(0 until z.x.toInt())
     md5!!.update(c)
     v
   },
   "__hsbase_MD5Final" to wrap3Boundary { out: StgAddr, _: StgAddr, v: VoidInh ->
-    out.arr.write(out.offset, md5!!.digest())
+    out.write(0, md5!!.digest())
     md5 = null
     v
   },
 
   "errorBelch2" to wrap3Boundary { x: StgAddr, y: StgAddr, v: VoidInh ->
     // TODO: this is supposed to be printf
-    System.err.println("errorBelch2: ${x.asArray().asCString()} ${y.asArray().asCString()}")
+    // TODO: use Language.currentContext().env.{in,out,err} instead of System.blah everywhere
+    System.err.println("errorBelch2: ${x.asCString()} ${y.asCString()}")
     v
   },
   "debugBelch2" to wrap3Boundary { x: StgAddr, y: StgAddr, v: VoidInh ->
-    System.err.println("debugBelch2: ${x.asArray().asCString()} ${y.asArray().asCString()}"); v
+    System.err.println("debugBelch2: ${x.asCString()} ${y.asCString()}"); v
   },
 
   "rts_setMainThread" to wrap2 { x: WeakRef, _: VoidInh -> UnboxedTuple(arrayOf()) },
-  "getOrSetGHCConcSignalSignalHandlerStore" to wrap2 { a: StablePtr, _: VoidInh ->
-    synchronized(GlobalStore) {
-      val x = GlobalStore.GHCConcSignalSignalHandlerStore
-      UnboxedTuple(arrayOf(if (x == null) {
-        GlobalStore.GHCConcSignalSignalHandlerStore = a
-        a
-      } else { x }))
-    }
-  },
+
   // TODO
   "isatty" to wrap2 { x: StgInt, _: VoidInh -> UnboxedTuple(arrayOf(StgInt(if (x.x in 0..2) 1L else 0L))) },
-  "fdReady" to { object : StgPrimOp(5) {
-    // FIXME: implement this, might need to use JNI
-    override fun run(frame: VirtualFrame, args: Array<Any>): Any {
-      val fd = (args[0] as StgInt).x
-      if (fd == 1L || fd == 0L) return UnboxedTuple(arrayOf(StgInt(1L)))
-      panic("todo: fdReady ${args[0]}")
-    }
-  } },
+//  "fdReady" to { object : StgPrimOp(5) {
+//    // FIXME: implement this, might need to use JNI
+//    override fun run(frame: VirtualFrame, args: Array<Any>): Any {
+//      val fd = (args[0] as StgInt).x
+//      if (fd == 1L || fd == 0L) return UnboxedTuple(arrayOf(StgInt(1L)))
+//      panic("todo: fdReady ${args[0]}")
+//    }
+//  } },
 
   "rintDouble" to wrap2 { x: StgDouble, _: VoidInh -> UnboxedTuple(arrayOf(StgDouble(Math.rint(x.x)))) },
 
   "rtsSupportsBoundThreads" to wrap1 { _: VoidInh -> UnboxedTuple(arrayOf(StgInt(0L))) },
 
-  "ghczuwrapperZC20ZCbaseZCSystemziPosixziInternalsZCwrite" to wrap4Boundary { x: StgInt, y: StgAddr, z: StgWord, _: VoidInh ->
-    // stdout
-    if (x.x == 1L) {
-      val s = y.asArray().copyOfRange(0, z.x.toInt())
-      print(String(s))
-      UnboxedTuple(arrayOf(StgInt(z.x.toLong())))
-    } else {
-      panic("nyi ghczuwrapperZC20ZCbaseZCSystemziPosixziInternalsZCwrite")
-    }
-  },
-  "ghczuwrapperZC22ZCbaseZCSystemziPosixziInternalsZCread" to wrap4Boundary { x: StgInt, y: StgAddr, z: StgWord, _: VoidInh ->
-    UnboxedTuple(arrayOf(StgInt(posix.read(x.x.toInt(), y.asBuffer(), z.x.toLong()))))
-  },
+  "initGCStatistics" to wrap1 { v: VoidInh -> v },
+
+//  "ghczuwrapperZC20ZCbaseZCSystemziPosixziInternalsZCwrite" to wrap4Boundary { x: StgInt, y: StgAddr, z: StgWord, _: VoidInh ->
+//    // stdout
+//    if (x.x == 1L) {
+//      val s = y.getRange(0 until z.x.toInt())
+//      print(String(s))
+//      UnboxedTuple(arrayOf(StgInt(z.x.toLong())))
+//    } else {
+//      panic("nyi ghczuwrapperZC20ZCbaseZCSystemziPosixziInternalsZCwrite")
+//    }
+//  },
+//  "ghczuwrapperZC22ZCbaseZCSystemziPosixziInternalsZCread" to wrap4Boundary { x: StgInt, y: StgAddr, z: StgWord, _: VoidInh ->
+//    UnboxedTuple(arrayOf(StgInt(posix.read(x.x.toInt(), y.asBuffer(), z.x.toLong()))))
+//  },
+
+  // TODO
+  "lockFile" to { object : StgPrimOp(5) {
+    override fun run(frame: VirtualFrame, args: Array<Any>): Any = UnboxedTuple(arrayOf(StgInt(0L)))
+  } },
+  "unlockFile" to wrap2 { x: StgInt, _: VoidInh -> UnboxedTuple(arrayOf(StgInt(0L))) },
 
   "shutdownHaskellAndExit" to wrap3Boundary { x: StgInt, _: StgInt, _: VoidInh -> throw TruffleStgExitException(x.x.toInt()) },
 
@@ -135,9 +285,9 @@ val primFCalls: Map<String, () -> StgPrimOp> = mapOf(
     UnboxedTuple(arrayOf())
   },
   "localeEncoding" to wrap1Boundary { _: VoidInh ->
-    UnboxedTuple(arrayOf(StgAddr("UTF-8".toByteArray() + zeroBytes, 0)))
+    UnboxedTuple(arrayOf(StgAddr.fromArray("UTF-8".toByteArray() + zeroBytes)))
   },
-  "stg_sig_install" to wrap4 { x: StgInt, y: StgInt, z: NullAddr, _: VoidInh ->
+  "stg_sig_install" to wrap4 { x: StgInt, y: StgInt, z: StgAddr, _: VoidInh ->
     // TODO
     UnboxedTuple(arrayOf(StgInt(-1)))
   },
@@ -147,17 +297,23 @@ val primFCalls: Map<String, () -> StgPrimOp> = mapOf(
       *Language.currentContext().env.applicationArguments
     )
 
-    val ixs = args.map { a ->
-      val ix = globalHeap.size
-      globalHeap += (a.toByteArray() + 0x00)
-      ix
+    val bs = args.map { it.toByteArray() + 0x00 }
+
+    val n = bs.sumBy { it.size + 8 }
+    val addr = unsafe.allocateMemory(n.toLong())
+    val buf = newDirectByteBuffer(addr, n)
+
+    val ixs = bs.map { a ->
+      val ix = buf.position()
+      buf.put(a)
+      ix + addr
     }
 
-    val argvIx = globalHeap.size
-    ixs.forEach { globalHeap += it.toLong().toByteArray() }
+    val argvIx = buf.position() + addr
+    ixs.forEach { buf.putLong(it) }
 
-    argc.arr.write(argc.offset, ixs.size.toByteArray())
-    argv.arr.write(argv.offset, argvIx.toLong().toByteArray())
+    argc.writeLong(0, ixs.size.toLong())
+    argv.writeLong(0, argvIx)
     UnboxedTuple(arrayOf())
   },
   "u_towupper" to wrap2 { x: StgInt, _: VoidInh ->

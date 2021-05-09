@@ -136,6 +136,8 @@ application {
     "--module-path=${compiler.asPath}",
     "--upgrade-module-path=${compiler.asPath}",
     "--add-opens=jdk.internal.vm.compiler/org.graalvm.compiler.truffle.runtime=ALL-UNNAMED",
+    "--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED",
+    "--add-opens=java.base/jdk.internal.ref=ALL-UNNAMED",
     "-Dtruffle.class.path.append=@TRUFFLESTG_APP_HOME@/lib/trufflestg-${project.version}.jar",
     "-Xss32m"
   )
@@ -150,6 +152,8 @@ val graalArgs = listOf(
   "--upgrade-module-path=${compiler.asPath}",
 //  "-XX:-UseJVMCIClassLoader",
 //  "-Dgraalvm.locatorDisabled=true",
+  "--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED",
+  "--add-opens=java.base/jdk.internal.ref=ALL-UNNAMED",
   "--add-opens=jdk.internal.vm.compiler/org.graalvm.compiler.truffle.runtime=ALL-UNNAMED",
   "-Dtruffle.class.path.append=build/libs/trufflestg-${project.version}.jar",
   "-Xss32m"
@@ -252,6 +256,7 @@ tasks.withType<ProcessResources> {
   from(files("etc/symlinks","etc/permissions")) {
     rename("(.*)","META-INF/$1")
   }
+  from("src/c/librts.so")
 }
 
 tasks.withType<DokkaTask> {

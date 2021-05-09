@@ -82,7 +82,8 @@ private fun toString(value: Any?): String =
   defaultMimeType = LANGUAGE_MIME_TYPE,
   characterMimeTypes = [LANGUAGE_MIME_TYPE],
   contextPolicy = ContextPolicy.SHARED,
-  fileTypeDetectors = [Language.Detector::class]
+  fileTypeDetectors = [Language.Detector::class],
+  dependentLanguages = ["nfi"]
 )
 @ProvidedTags(
   CallTag::class, StatementTag::class, RootTag::class, RootBodyTag::class, ExpressionTag::class,

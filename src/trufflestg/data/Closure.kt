@@ -2,8 +2,6 @@ package trufflestg.data
 
 import com.oracle.truffle.api.CallTarget
 import trufflestg.array_utils.*
-import trufflestg.frame.DataFrame
-import trufflestg.jit.CallUtils
 import trufflestg.jit.ClosureRootNode
 import trufflestg.panic
 import com.oracle.truffle.api.CompilerDirectives

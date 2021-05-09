@@ -58,13 +58,10 @@ class CallWhnf(@JvmField val argsSize: Int, val tail_call: Boolean): Node() {
     val f = if (fn is Thunk) {
       thunkProfile.enter()
       // TODO: concurrency (blackholes/synchronization)
-      if (seenThunkValue) {
+      if (!seenThunkClosure) {
         val v = fn.value_
         if (v === null) {
-          if (!seenThunkClosure) {
-            invalidate(); seenThunkClosure = true
-            reportPolymorphicSpecialize()
-          }
+          invalidate(); seenThunkClosure = true; reportPolymorphicSpecialize()
           val c = fn.expectClosure()
           fn.clos = null
           val x = thunkDispatch.run(frame, c, arrayOf())
@@ -74,7 +71,7 @@ class CallWhnf(@JvmField val argsSize: Int, val tail_call: Boolean): Node() {
       } else {
         val c = fn.clos
         if (c === null) {
-          invalidate(); seenThunkValue = true
+          if (!seenThunkValue) { invalidate(); seenThunkValue = true }
           fn.expectValue()
         } else {
           fn.clos = null

@@ -18,6 +18,7 @@ import com.oracle.truffle.api.profiles.BranchProfile
 import com.oracle.truffle.api.source.SourceSection
 import trufflestg.array_utils.map
 import trufflestg.data.DataTypes
+import java.lang.reflect.Modifier
 
 // utility
 @Suppress("NOTHING_TO_INLINE")
@@ -153,11 +154,13 @@ abstract class CaseAlts : Node() {
       else -> panic{"case prim of $ty"}
     }
 
+    val exactType: Boolean = expectedType.modifiers and (Modifier.ABSTRACT or Modifier.INTERFACE) == 0
+
     init { assert(alts.all { expectedType.isInstance(it) }) }
 
     @ExplodeLoop
     override fun execute(frame: VirtualFrame, x: Any?): Any? {
-      val x2 = CompilerDirectives.castExact(x, expectedType)
+      val x2 = if (exactType) CompilerDirectives.castExact(x, expectedType) else expectedType.cast(x)
       alts.forEachIndexed { ix, y ->
         if (x2 == y) {
           profiles[ix].enter()

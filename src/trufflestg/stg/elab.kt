@@ -1,6 +1,7 @@
 // convert from ghc's stg rep to a truffle tree a function at a time
 package trufflestg.stg
 
+import com.oracle.truffle.api.CompilerDirectives
 import trufflestg.Language
 import trufflestg.data.*
 import trufflestg.panic
@@ -39,14 +40,14 @@ fun Stg.Lit.compile(): Any = when (this) {
   is Stg.Lit.LitDouble -> StgDouble(x.x.toDouble() / x.y) // TODO: i guess????
   is Stg.Lit.LitFloat -> TODO()
   is Stg.Lit.LitLabel -> TODO()
-  is Stg.Lit.LitNullAddr -> NullAddr
+  is Stg.Lit.LitNullAddr -> StgAddr.nullAddr
   is Stg.Lit.LitNumber -> when (x) {
     Stg.LitNumType.LitNumInt -> StgInt(y.toLong())
     Stg.LitNumType.LitNumInt64 -> TODO()
     Stg.LitNumType.LitNumWord -> StgWord(y.toLong().toULong())
     Stg.LitNumType.LitNumWord64 -> TODO()
   }
-  is Stg.Lit.LitString -> StgAddr(x, 0)
+  is Stg.Lit.LitString -> StgAddr.fromArray(x)
 }
 
 fun Stg.Expr.compile(ci: CompileInfo, fd: FrameDescriptor, tc: Boolean): Code = when(this) {
@@ -110,7 +111,7 @@ fun Stg.Expr.compile(ci: CompileInfo, fd: FrameDescriptor, tc: Boolean): Code = 
   }
   is Stg.Expr.StgLit -> Code.Lit(x.compile())
   is Stg.Expr.StgOpApp -> when (op) {
-    is Stg.StgOp.StgFCallOp -> StgFCall(op.x, map(args) { it.compile(ci, fd) })
+    is Stg.StgOp.StgFCallOp -> StgFCall(type, op.x, map(args) { it.compile(ci, fd) })
     is Stg.StgOp.StgPrimCallOp -> StgPrimCall(op.x, map(args) { it.compile(ci, fd) })
     is Stg.StgOp.StgPrimOp -> StgPrim(ci.module.tyCons[tn.orElse(null)], op.x, map(args) { it.compile(ci, fd) })
   }
@@ -273,7 +274,7 @@ sealed class TopLevel(
     binder: Stg.SBinder,
     string: ByteArray
   ) : TopLevel(binder, module) {
-    val x = StgAddr(string, 0)
+    val x = StgAddr.fromArray(string)
     override fun getValue(): Any = x
   }
   class DataCon(
@@ -324,15 +325,20 @@ class CborModuleDir(
     loadedModules[name] = m
     return m
   }
+
+  @CompilerDirectives.CompilationFinal private var nativeLib: Any? = null
+  fun nativeLib(): Any {
+    var x = nativeLib
+    if (x === null) {
+      CompilerDirectives.transferToInterpreterAndInvalidate()
+      val p = path.substringBeforeLast("stg/") + "libs.so"
+      x = dlopen(p)
+      nativeLib = x
+    }
+    return x
+  }
 }
 
-// contents of magic GHC.Prim module
-val prims: Map<String,Any> = mapOf(
-  "void#" to VoidInh,
-  "realWorld#" to VoidInh,
-  "coercionToken#" to VoidInh,
-//  "void#" to
-)
 
 class Module(
   val language: Language,
@@ -391,7 +397,10 @@ class Module(
         val n = x.second.name
         prims[x.second.name] ?: TODO("GHC.Prim.$n not implemented: $x")
       } else {
-        moduleDir[x.first.second.x]!![x.second.name]!!
+        val fn = FullName(x.first.first.x, x.first.second.x, x.second.name)
+//        if (fn.module == "System.Environment.ExecutablePath") println(fn)
+        if (fn in overrides) overrides[fn]!!
+          else moduleDir[x.first.second.x]!![x.second.name]!!
       }
     }
     id in top_bindings -> top_bindings[id]!!.getValue()
@@ -403,5 +412,18 @@ class Module(
   operator fun get(name: String): Any? = top_bindings[names[name]]?.getValue()
 
 }
+
+
+// contents of magic GHC.Prim module
+val prims: Map<String,Any> = mapOf(
+        "void#" to VoidInh,
+        "realWorld#" to VoidInh,
+        "coercionToken#" to VoidInh,
+//  "void#" to
+)
+
+val overrides: Map<FullName,Any?> = mapOf(
+//  FullName("base", "System.Environment.ExecutablePath", "getExecutablePath") to null
+)
 
 

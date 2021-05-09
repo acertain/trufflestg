@@ -153,9 +153,6 @@ class DynamicClassDataConInfo(
     // TODO: use CompilerDirectives.isExact once its released
     if (klass!!.isInstance(x)) CompilerDirectives.castExact(x, klass) else null
 
-  // TODO: unbox fields, and set field type when we know it can't be a thunk (bang patterns)
-  // ghc-wpc isn't telling us about bang patterns though :(
-  // maybe could look at worker type?
   private val klass: Class<DataCon>? = if (size == 0) null else run {
     // TODO: better mangling
     fun mangle(x: String) = x.replace("""[\[\]]""".toRegex(), "_")
@@ -169,6 +166,8 @@ class DynamicClassDataConInfo(
         is Stg.PrimRep.IntRep -> stgIntFieldInfo
         is Stg.PrimRep.WordRep -> stgWordFieldInfo
         is Stg.PrimRep.LiftedRep -> objectFieldInfo
+        // TODO: set field type when we know it (bang patterns)
+        // need to add bang pattern & type info to ghc-wpc
         else -> {
 //          println("todo PrimRep $it")
           objectFieldInfo
@@ -195,7 +194,6 @@ class DynamicClassDataConInfo(
     val field = kls.getDeclaredField("_info")
     field.set(null, this)
     val modifiers = Field::class.java.getDeclaredField("modifiers")
-    // TODO: make sure the final from here gets picked up by the jit
     modifiers.isAccessible = true
     modifiers.setInt(field, field.modifiers and Modifier.FINAL)
     modifiers.isAccessible = false
